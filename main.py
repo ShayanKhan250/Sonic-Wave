@@ -267,8 +267,19 @@ def _auth_guard(request: Request, captcha: str | None):
             data = r.json()
             ok = bool(data.get("success"))
             score = data.get("score")
-            if ok and score is not None and float(score) < 0.3:   # v3: scored bot traffic
+            # v3 trust score: new site keys / new domains / VPN users legitimately score
+            # as low as 0.1 for days, so only reject the hard floor. Real abuse is
+            # already throttled by the per-IP rate limiter above.
+            min_score = float(os.environ.get("CAPTCHA_MIN_SCORE", "0.05"))
+            if ok and score is not None and float(score) < min_score:
                 ok = False
+            if not ok:
+                codes = data.get("error-codes") or []
+                # Config-side failures (wrong domain registration, expired/duplicate
+                # token after a slow page) must never lock out real users.
+                lenient = {"timeout-or-duplicate", "hostname-mismatch", "browser-error"}
+                if any(c in lenient for c in codes):
+                    ok = True
     except httpx.HTTPError:
         ok = True   # Google unreachable from our server: never punish users for our outage
     except (TypeError, ValueError):
