@@ -11,6 +11,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="SonicWave"/>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<script>
+/* PWA bootstrap — MUST run before anything else so the install event is never missed.
+   Chrome fires `beforeinstallprompt` as soon as installability criteria pass, which
+   can happen before the main app script below has finished parsing. */
+window.__swBip = null;
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  window.__swBip = e;
+  if (window.__swBipCb) { try { window.__swBipCb(e); } catch (err) {} }
+});
+if ("serviceWorker" in navigator) {
+  try { navigator.serviceWorker.register("/sw.js").catch(function () {}); } catch (e) {}
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23fa2d48'/%3E%3Cstop offset='1' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M24 46V20l20-4v24' stroke='white' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='19' cy='46' r='5' fill='white'/%3E%3Ccircle cx='39' cy='40' r='5' fill='white'/%3E%3C/svg%3E" type="image/svg+xml"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -361,6 +375,10 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 .gate-btns .btn{padding:13px 32px;font-size:14px}
 .gate-btns .btn-ghost{border-color:#3a3a48;color:#fff}
 .gate-note{margin-top:20px;font-size:12px;color:#6b6b7e}
+#gate-install{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:11px 26px;font-size:13.5px;font-weight:700;font-family:inherit;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.28);border-radius:99px;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+#gate-install svg{width:17px;height:17px}
+#gate-install:hover{transform:scale(1.04);border-color:#fff;background:rgba(255,255,255,.06)}
+@media (display-mode: standalone){#gate-install{display:none}}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);display:none;place-items:center;z-index:100}
 #consent{position:fixed;left:50%;bottom:calc(var(--player) + 14px);transform:translate(-50%,18px);width:min(540px,calc(100vw - 28px));background:var(--solid);border:1px solid var(--border);border-radius:16px;padding:16px 18px 15px;z-index:400;opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.2,1,.4,1);box-shadow:0 18px 50px rgba(0,0,0,.5)}
 #consent.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -527,6 +545,7 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
       <button class="btn btn-grad" id="gate-signup">Sign Up Free</button>
       <button class="btn btn-ghost" id="gate-login">Log In</button>
     </div>
+    <button id="gate-install" title="Install SonicWave on this device"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v7"/><path d="m8.5 11 3.5 3.5L15.5 11"/></svg>Install App</button>
     <div class="gate-note">Demo account: <b style="color:#a0a0b2">demo / demo123</b> &nbsp;·&nbsp; <a href="/privacy" target="_blank" rel="noopener" style="color:#a0a0b2;text-decoration:underline">Privacy Policy</a></div>
   </div>
 </div>
@@ -1051,22 +1070,32 @@ $("#prof-delgo").onclick = async () => {
   setTimeout(() => location.reload(), 700);
 };
 
-/* ---------- Get the App (PWA install) ---------- */
-let deferredInstall = null;
+/* ---------- Get the App (PWA install) ----------
+   The install event is captured by the tiny bootstrap script in <head>
+   (window.__swBip), so it can never be missed no matter how early Chrome
+   fires it. If the user clicks Install before the browser has announced
+   installability, we WAIT for the event (up to 3s) instead of giving up. */
 const isStandalone = () =>
   (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredInstall = e;
-});
+window.__swBipCb = () => {       // event arrived (possibly while the modal is open)
+  const h = $("#app-hint");
+  if (h && $("#app-overlay").classList.contains("open") && !isStandalone())
+    h.textContent = "Ready to install — click the button above ⬆";
+};
 window.addEventListener("appinstalled", () => {
-  deferredInstall = null;
+  window.__swBip = null;
   const b = $("#getapp-btn"); if (b) b.style.display = "none";
+  const g = $("#gate-install"); if (g) g.style.display = "none";
   $("#app-overlay").classList.remove("open");
   toast("SonicWave installed! Find it on your home screen 🎉");
 });
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+function waitForInstallEvent(ms) {
+  return new Promise((res) => {
+    if (window.__swBip) return res(window.__swBip);
+    const prev = window.__swBipCb;
+    const t = setTimeout(() => { window.__swBipCb = prev; res(null); }, ms);
+    window.__swBipCb = (e) => { clearTimeout(t); window.__swBipCb = prev; if (prev) { try { prev(e); } catch (x) {} } res(e); };
+  });
 }
 function appPlatform() {
   const ua = navigator.userAgent || "";
@@ -1076,37 +1105,63 @@ function appPlatform() {
   if (/Linux/i.test(ua)) return "linux";
   return "windows";
 }
+const INSTALL_TIPS = {
+  ios: "On iPhone/iPad: open this site in Safari, tap the Share button ⎙, then “Add to Home Screen”.",
+  android: "In Chrome: tap the ⋮ menu (top-right), then “Install app” / “Add to Home screen”.",
+  mac: "In Chrome: click the install icon in the address bar. In Safari: File → Add to Dock.",
+  linux: "In Chrome/Chromium: click the install icon at the right end of the address bar.",
+  windows: "In Chrome or Edge: click the install icon at the right end of the address bar.",
+};
 function openGetApp() {
   $("#app-hint").textContent = "";
   if (isStandalone()) $("#app-hint").textContent = "You're already using the installed app ✔";
+  else if (window.__swBip) $("#app-hint").textContent = "Ready to install — click the button above ⬆";
   $("#app-overlay").classList.add("open");
 }
 $("#getapp-btn").onclick = openGetApp;
 $("#set-getapp").onclick = () => { $("#set-overlay").classList.remove("open"); openGetApp(); };
+const _gateInstall = $("#gate-install");
+if (_gateInstall) _gateInstall.onclick = openGetApp;
 $("#app-close").onclick = () => $("#app-overlay").classList.remove("open");
 $("#app-overlay").addEventListener("click", e => { if (e.target.id === "app-overlay") $("#app-overlay").classList.remove("open"); });
+let _installBusy = false;
 $("#app-install").onclick = async () => {
-  const hint = $("#app-hint"); hint.textContent = "";
+  if (_installBusy) return;
+  const hint = $("#app-hint");
   if (isStandalone()) { hint.textContent = "You're already using the installed app ✔"; return; }
-  if (deferredInstall) {
-    try {
-      deferredInstall.prompt();
-      const choice = await deferredInstall.userChoice;
-      if (choice && choice.outcome === "accepted") { deferredInstall = null; return; }
-      hint.textContent = "No problem — you can install any time from this menu.";
-    } catch (e) { deferredInstall = null; }
-    return;
+  _installBusy = true;
+  const btn = $("#app-install"), orig = btn.textContent;
+  try {
+    let ev = window.__swBip;
+    if (!ev) {                                   // criteria may still be evaluating — wait for it
+      hint.textContent = "Preparing install…";
+      btn.textContent = "⏳ Preparing…";
+      ev = await waitForInstallEvent(3000);
+      btn.textContent = orig;
+    }
+    if (ev) {
+      try {
+        window.__swBip = null;                   // a prompt event is single-use
+        ev.prompt();
+        const choice = await ev.userChoice;
+        if (choice && choice.outcome === "accepted") { hint.textContent = "Installing… check your home screen / desktop 🎉"; return; }
+        hint.textContent = "No problem — you can install any time from this menu.";
+      } catch (e) {
+        hint.textContent = INSTALL_TIPS[appPlatform()];
+      }
+      return;
+    }
+    // Browser never offered auto-install (iOS Safari, Firefox, or already installed):
+    hint.textContent = INSTALL_TIPS[appPlatform()];
+  } finally {
+    _installBusy = false;
+    btn.textContent = orig;
   }
-  const tips = {
-    ios: "On iPhone/iPad: open this site in Safari, tap the Share button, then “Add to Home Screen”.",
-    android: "In Chrome: tap the ⋮ menu (top-right), then “Install app” / “Add to Home screen”.",
-    mac: "In Chrome: click the install icon in the address bar. In Safari: File → Add to Dock.",
-    linux: "In Chrome/Chromium: click the install icon at the right end of the address bar.",
-    windows: "In Chrome or Edge: click the install icon at the right end of the address bar.",
-  };
-  hint.textContent = tips[appPlatform()];
 };
-if (isStandalone()) { const b = $("#getapp-btn"); if (b) b.style.display = "none"; }
+if (isStandalone()) {
+  const b = $("#getapp-btn"); if (b) b.style.display = "none";
+  const g = $("#gate-install"); if (g) g.style.display = "none";
+}
 
 async function submitAuth() {
   const username = $("#auth-user").value.trim(), password = $("#auth-pass").value;
