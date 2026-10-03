@@ -336,6 +336,16 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 .gate-btns .btn-ghost{border-color:#3a3a48;color:#fff}
 .gate-note{margin-top:20px;font-size:12px;color:#6b6b7e}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);display:none;place-items:center;z-index:100}
+#consent{position:fixed;left:50%;bottom:calc(var(--player) + 14px);transform:translate(-50%,18px);width:min(540px,calc(100vw - 28px));background:var(--solid);border:1px solid var(--border);border-radius:16px;padding:16px 18px 15px;z-index:400;opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.2,1,.4,1);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#consent.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#consent h4{font-size:14px;margin-bottom:5px}
+#consent p{font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:12px}
+#consent p a{color:var(--acc)}
+#consent .cbtns{display:flex;gap:9px}
+#consent .cbtns button{flex:1;padding:9.5px 0;border-radius:99px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text);transition:all .15s}
+#consent .cbtns button:hover{background:var(--card-h)}
+#consent .cbtns .ok{background:var(--grad);border:none;color:#fff;box-shadow:0 4px 14px rgba(250,45,72,.3)}
+#consent .cbtns .ok:hover{filter:brightness(1.08);background:var(--grad)}
 .overlay.open{display:grid}
 .modal{background:var(--solid);border:1px solid var(--border);border-radius:18px;padding:28px;width:min(400px,92vw);animation:pop .22s cubic-bezier(.2,1.4,.5,1)}
 @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
@@ -489,7 +499,16 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
       <button class="btn btn-grad" id="gate-signup">Sign Up Free</button>
       <button class="btn btn-ghost" id="gate-login">Log In</button>
     </div>
-    <div class="gate-note">Demo account: <b style="color:#a0a0b2">demo / demo123</b></div>
+    <div class="gate-note">Demo account: <b style="color:#a0a0b2">demo / demo123</b> &nbsp;·&nbsp; <a href="/privacy" target="_blank" rel="noopener" style="color:#a0a0b2;text-decoration:underline">Privacy Policy</a></div>
+  </div>
+</div>
+
+<div id="consent" role="dialog" aria-label="Cookie preferences">
+  <h4>🍪 Cookies &amp; storage</h4>
+  <p>SonicWave uses <b>essential storage</b> to keep you signed in and remember your settings, and <b>optional storage</b> that remembers your recently played songs and searches on this device. Login security by Google reCAPTCHA &amp; Google Sign-In may set their own cookies. Read our <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+  <div class="cbtns">
+    <button id="c-ess">Essential only</button>
+    <button class="ok" id="c-all">Allow all</button>
   </div>
 </div>
 
@@ -516,6 +535,7 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
       <div id="gsi-btn" style="display:flex;justify-content:center;min-height:40px"></div>
     </div>
     <div style="text-align:center;margin-top:13px;font-size:12px;color:var(--muted)">Demo account: <b style="color:var(--text)">demo / demo123</b></div>
+    <div style="text-align:center;margin-top:9px"><a href="/privacy" target="_blank" rel="noopener" style="font-size:11px;color:var(--dim);text-decoration:underline">🔒 Privacy Policy — how we protect your data</a></div>
   </div>
 </div>
 
@@ -558,6 +578,13 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
         <button data-m="30">30m</button>
         <button data-m="60">1h</button>
       </div>
+    </div>
+    <div class="set-row">
+      <div class="set-info">
+        <div class="set-t">Privacy &amp; cookies</div>
+        <div class="set-d">Read the <a href="/privacy" target="_blank" rel="noopener" style="color:var(--acc)">Privacy Policy</a> or change your cookie choice.</div>
+      </div>
+      <button class="btn" id="set-cookies" style="font-size:12px;padding:8px 14px;border:1px solid var(--border);border-radius:99px;background:transparent;color:var(--text);cursor:pointer">Manage</button>
     </div>
     <button class="btn btn-grad mwide" id="set-done" style="margin-top:6px">Done</button>
   </div>
@@ -970,7 +997,26 @@ async function musicSearch(q, limit = 20) {
   // keep tracks with a direct stream OR resolvable at play time (YouTube Music / charts)
   return (d.results || []).filter(t => t.preview_url || String(t.id || "").startsWith("yt:"));
 }
+/* ---------- cookie / storage consent ---------- */
+const consentOK = () => localStorage.getItem("sw_consent") !== "essential";
+function setConsent(v) {
+  localStorage.setItem("sw_consent", v);
+  if (v === "essential") { localStorage.removeItem("sw_recent"); localStorage.removeItem("sw_rsearch"); localStorage.removeItem("sw_vol"); }
+  const el = $("#consent"); if (el) el.classList.remove("show");
+  toast(v === "all" ? "Thanks! All features enabled." : "Got it — only essential storage will be used.");
+  try { if (v === "essential" && S.view === "home") setView("home"); } catch (e) {}
+}
+function initConsent(force = false) {
+  const el = $("#consent"); if (!el) return;
+  if (!force && localStorage.getItem("sw_consent")) return;
+  setTimeout(() => el.classList.add("show"), force ? 0 : 1200);
+}
+$("#c-all").onclick = () => setConsent("all");
+$("#c-ess").onclick = () => setConsent("essential");
+initConsent();
+
 function pushRecent(t) {
+  if (!consentOK()) return;
   try {
     let arr = JSON.parse(localStorage.getItem("sw_recent") || "[]");
     arr = arr.filter(x => x.id !== t.id);
@@ -1115,7 +1161,13 @@ $("#vol").addEventListener("click", (e) => {
   const r = e.currentTarget.getBoundingClientRect();
   audio.volume = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
   $("#vol-fill").style.width = (audio.volume * 100) + "%";
+  if (consentOK()) { try { localStorage.setItem("sw_vol", String(audio.volume)); } catch (err) {} }
 });
+// restore saved volume (optional-storage preference)
+try {
+  const sv = parseFloat(localStorage.getItem("sw_vol"));
+  if (consentOK() && !isNaN(sv) && sv >= 0 && sv <= 1) { audio.volume = sv; $("#vol-fill").style.width = (sv * 100) + "%"; }
+} catch (err) {}
 $("#pb-play").onclick = togglePlay; $("#fs-play").onclick = togglePlay;
 $("#pb-next").onclick = nextTrack;  $("#fs-next").onclick = nextTrack;
 $("#pb-prev").onclick = prevTrack;  $("#fs-prev").onclick = prevTrack;
@@ -1227,6 +1279,7 @@ function syncSettingsUI() {
 }
 $("#set-btn").onclick = () => { syncSettingsUI(); $("#set-overlay").classList.add("open"); };
 $("#set-done").onclick = () => $("#set-overlay").classList.remove("open");
+$("#set-cookies").onclick = () => { $("#set-overlay").classList.remove("open"); initConsent(true); };
 $("#set-overlay").addEventListener("click", e => { if (e.target.id === "set-overlay") $("#set-overlay").classList.remove("open"); });
 $$("#set-theme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.t); syncSettingsUI(); });
 $("#set-atmos").onclick = () => setAtmos(!S.atmos);
@@ -1748,6 +1801,7 @@ const CATS = [
 ];
 const getRS = () => { try { return JSON.parse(localStorage.getItem("sw_rsearch") || "[]"); } catch (e) { return []; } };
 function pushRS(q, img) {
+  if (!consentOK()) return;
   try {
     let arr = getRS().filter(x => x.q.toLowerCase() !== q.toLowerCase());
     arr.unshift({ q, img: img || null });
