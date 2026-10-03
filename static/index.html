@@ -657,16 +657,16 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     <button class="btn btn-grad mwide" id="app-install">⬇ Install on this device</button>
     <div class="err" id="app-hint" style="color:var(--muted);text-align:center"></div>
     <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">DOWNLOAD SETUP FILE</div>
-    <div class="dl-grid">
-      <a class="dl-card" id="dl-win" href="/download/windows" download>🪟<b>Windows</b><span>.exe setup</span></a>
+    <div class="dl-grid" style="grid-template-columns:repeat(2,1fr)">
+      <a class="dl-card" id="dl-win" href="/download/windows">🪟<b>Windows 10 / 11</b><span>Native app · .exe setup</span></a>
+      <a class="dl-card" id="dl-and" href="/download/android" download>🤖<b>Android</b><span>Native app · .apk</span></a>
       <a class="dl-card" id="dl-mac" href="/download/mac" download>🍎<b>macOS</b><span>.app bundle</span></a>
       <a class="dl-card" id="dl-lin" href="/download/linux" download>🐧<b>Linux</b><span>installer</span></a>
     </div>
-    <div style="font-size:11px;color:var(--dim);margin:7px 0 0;line-height:1.5">Windows may show an "unknown publisher" screen — click <b style="color:var(--muted)">More info → Run anyway</b> (the app is unsigned, not unsafe). On Mac: right-click the app → Open.</div>
-    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">ON MOBILE</div>
+    <div style="font-size:11px;color:var(--dim);margin:7px 0 0;line-height:1.5">Windows: if SmartScreen appears, click <b style="color:var(--muted)">More info → Run anyway</b>. Android: allow "Install unknown apps" when asked. Mac: right-click the app → Open.</div>
+    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">ON iPHONE / iPAD</div>
     <div class="app-rows">
-      <div class="app-row"><span class="app-os">🤖 Android</span><span class="app-how">Chrome → tap <b>⬇ Install on this device</b> above — SonicWave is added to your apps</span></div>
-      <div class="app-row"><span class="app-os">📱 iPhone / iPad</span><span class="app-how">Safari → Share <b>⎙</b> → <b>Add to Home Screen</b></span></div>
+      <div class="app-row"><span class="app-os">📱 iPhone / iPad</span><span class="app-how">Safari → Share <b>⎙</b> → <b>Add to Home Screen</b> (Apple doesn't allow sideloaded apps)</span></div>
     </div>
     <div style="margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap">
       <a class="btn btn-ghost btn-sm" href="https://github.com/ShayanKhan250/Sonic-Wave" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>View on GitHub</a>

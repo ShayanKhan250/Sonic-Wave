@@ -7,7 +7,7 @@ from typing import Annotated
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 import db
@@ -178,12 +178,21 @@ def pwa_logo():
 
 _DL_DIR = os.path.join(STATIC_DIR, "downloads")
 
+# The native Windows app (Electron, ~97 MB) lives in GitHub Releases — too big
+# for the repo itself. This permalink always points at the newest release asset.
+WINDOWS_EXE_URL = "https://github.com/ShayanKhan250/Sonic-Wave/releases/latest/download/SonicWave-Setup.exe"
+
 
 @app.get("/download/windows", include_in_schema=False)
 def download_windows():
-    return FileResponse(os.path.join(_DL_DIR, "SonicWave-Setup.exe"),
-                        media_type="application/vnd.microsoft.portable-executable",
-                        filename="SonicWave-Setup.exe")
+    return RedirectResponse(WINDOWS_EXE_URL, status_code=302)
+
+
+@app.get("/download/android", include_in_schema=False)
+def download_android():
+    return FileResponse(os.path.join(_DL_DIR, "SonicWave.apk"),
+                        media_type="application/vnd.android.package-archive",
+                        filename="SonicWave.apk")
 
 
 @app.get("/download/mac", include_in_schema=False)

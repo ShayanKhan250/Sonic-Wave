@@ -26,22 +26,17 @@ No install needed — open **[sonicwave-gamma.vercel.app](https://sonicwave-gamm
 
 ## ⬇ Download
 
-### Desktop setup files
+### Native apps
 
 | Platform | Download | Notes |
 |---|---|---|
-| 🪟 **Windows 10 / 11** (x64) | **[SonicWave-Setup.exe](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Setup.exe)** | Run it once — installs SonicWave, adds Desktop + Start Menu shortcuts and opens the app. If SmartScreen appears: **More info → Run anyway** (unsigned, not unsafe) |
-| 🍎 **macOS** | **[SonicWave-macOS.zip](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-macOS.zip)** | Unzip → drag **SonicWave.app** to Applications → right-click → **Open** (first time only) |
+| 🪟 **Windows 10 / 11** (x64) | **[SonicWave-Setup.exe](https://github.com/ShayanKhan250/Sonic-Wave/releases/latest/download/SonicWave-Setup.exe)** | Full native desktop app (Electron/Chromium — same architecture as Spotify). One-click install, Desktop + Start Menu shortcuts, opens in its own window. If SmartScreen appears: **More info → Run anyway** (unsigned, not unsafe) |
+| 🤖 **Android 7+** | **[SonicWave.apk](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave.apk)** | Native Android app (130 KB). Allow "Install unknown apps" when prompted |
+| 🍎 **macOS** | **[SonicWave-macOS.zip](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-macOS.zip)** | App bundle: unzip → drag **SonicWave.app** to Applications → right-click → **Open** (first time only) |
 | 🐧 **Linux** | **[SonicWave-Linux-Installer.sh](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Linux-Installer.sh)** | `bash SonicWave-Linux-Installer.sh` — adds SonicWave to your app menu with its icon |
+| 📱 **iPhone / iPad** | — | **Safari** → **Share ⎙** → **Add to Home Screen** (Apple doesn't allow sideloading) |
 
 You can also grab the same files from the **Get App** button inside the [web player](https://sonicwave-gamma.vercel.app).
-
-### Mobile
-
-| Platform | How to install |
-|---|---|
-| 🤖 **Android** | Open the [site](https://sonicwave-gamma.vercel.app) in **Chrome** → tap **Install App** — SonicWave is added to your app drawer |
-| 📱 **iPhone / iPad** | **Safari** → **Share ⎙** → **Add to Home Screen** |
 
 ### Or install straight from the browser (all desktops)
 
