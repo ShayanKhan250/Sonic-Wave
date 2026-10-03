@@ -488,14 +488,31 @@ def google_login(body: GoogleIn, conn: Conn, request: Request):
     username = f"google_{sub}"
     row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
     if row:
-        uid, display = row["id"], row["display_name"]
+        uid, display, avatar = row["id"], row["display_name"], _avatar_of(row)
     else:
         # Google users get an unusable random password — they always sign in via Google.
         uid = db.create_user(conn, username, _secrets.token_hex(24), name)
-        display = name
+        display, avatar = name, (info.get("picture") or None)
+        if avatar:
+            try:
+                conn.execute("UPDATE users SET avatar=? WHERE id=?", (avatar, uid))
+                conn.commit()
+            except Exception:
+                avatar = None
     token = db.issue_token(conn, uid)
-    return {"user": {"id": uid, "username": username, "display_name": display},
+    return {"user": {"id": uid, "username": username, "display_name": display, "avatar": avatar},
             "token": token, "token_type": "bearer"}
+
+
+def _avatar_of(row):
+    try:
+        return row["avatar"] if "avatar" in row.keys() else None
+    except Exception:
+        return None
+
+
+def _valid_avatar(v: str) -> bool:
+    return v.startswith("data:image/") or v.startswith("preset:") or v.startswith("https://")
 
 
 @app.get("/api/auth/me", tags=["Auth"])
@@ -503,7 +520,62 @@ def me(user: User, conn: Conn):
     likes = conn.execute("SELECT COUNT(*) c FROM likes WHERE user_id=?", (user["id"],)).fetchone()["c"]
     playlists = conn.execute("SELECT COUNT(*) c FROM playlists WHERE owner_id=?", (user["id"],)).fetchone()["c"]
     return {"id": user["id"], "username": user["username"], "display_name": user["display_name"],
+            "avatar": _avatar_of(user),
             "created_at": user["created_at"], "liked_songs": likes, "playlists": playlists}
+
+
+class ProfileIn(BaseModel):
+    display_name: str | None = Field(None, max_length=60)
+    avatar: str | None = Field(None, max_length=400_000)   # resized client-side; ~50 KB typical
+
+
+@app.post("/api/me/profile", tags=["Auth"])
+def update_profile(body: ProfileIn, user: User, conn: Conn):
+    sets, vals = [], []
+    if body.display_name is not None:
+        dn = body.display_name.strip()[:40]
+        if not dn:
+            raise HTTPException(400, "Display name cannot be empty.")
+        sets.append("display_name=?"); vals.append(dn)
+    if body.avatar is not None:
+        av = body.avatar.strip()
+        if av and not _valid_avatar(av):
+            raise HTTPException(400, "Invalid image format.")
+        sets.append("avatar=?"); vals.append(av or None)
+    if not sets:
+        raise HTTPException(400, "Nothing to update.")
+    vals.append(user["id"])
+    conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=?", tuple(vals))
+    conn.commit()
+    row = conn.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+    return {"id": row["id"], "username": row["username"], "display_name": row["display_name"],
+            "avatar": _avatar_of(row)}
+
+
+class DeleteAccountIn(BaseModel):
+    confirm: str
+
+
+@app.post("/api/me/account/delete", tags=["Auth"])
+def delete_account(body: DeleteAccountIn, user: User, conn: Conn):
+    if body.confirm.strip().upper() != "DELETE":
+        raise HTTPException(400, 'Type "DELETE" to confirm — this cannot be undone.')
+    uid = user["id"]
+    for q in (
+        "DELETE FROM user_playlist_tracks WHERE playlist_id IN (SELECT id FROM user_playlists WHERE user_id=?)",
+        "DELETE FROM user_playlists WHERE user_id=?",
+        "DELETE FROM liked_tracks WHERE user_id=?",
+        "DELETE FROM likes WHERE user_id=?",
+        "DELETE FROM plays WHERE user_id=?",
+        "DELETE FROM queue_items WHERE user_id=?",
+        "DELETE FROM playlist_songs WHERE playlist_id IN (SELECT id FROM playlists WHERE owner_id=?)",
+        "DELETE FROM playlists WHERE owner_id=?",
+        "DELETE FROM tokens WHERE user_id=?",
+        "DELETE FROM users WHERE id=?",
+    ):
+        conn.execute(q, (uid,))
+    conn.commit()
+    return {"deleted": True, "message": "Your account and all data have been permanently erased."}
 
 @app.post("/api/auth/logout", tags=["Auth"])
 def logout(user: User, conn: Conn, authorization: str = Header(...)):
@@ -1106,7 +1178,7 @@ def _owned_upl(conn, pid: int, user):
 
 @app.get("/api/me/playlists", tags=["Playlists"])
 def my_playlists_v2(user: User, conn: Conn):
-    pls = conn.execute("SELECT id, name, created_at FROM user_playlists WHERE user_id=? ORDER BY created_at DESC",
+    pls = conn.execute("SELECT id, name, cover, created_at FROM user_playlists WHERE user_id=? ORDER BY created_at DESC",
                        (user["id"],)).fetchall()
     out = []
     for p in pls:
@@ -1114,7 +1186,7 @@ def my_playlists_v2(user: User, conn: Conn):
             "SELECT img FROM user_playlist_tracks WHERE playlist_id=? AND img IS NOT NULL ORDER BY created_at LIMIT 4",
             (p["id"],)).fetchall()]
         cnt = conn.execute("SELECT COUNT(*) c FROM user_playlist_tracks WHERE playlist_id=?", (p["id"],)).fetchone()["c"]
-        out.append({"id": p["id"], "name": p["name"], "count": cnt, "covers": covers})
+        out.append({"id": p["id"], "name": p["name"], "count": cnt, "covers": covers, "cover": p["cover"]})
     return {"count": len(out), "playlists": out}
 
 
@@ -1131,7 +1203,23 @@ def playlist_detail_v2(pid: int, user: User, conn: Conn):
     rows = conn.execute(
         "SELECT track_id, title, artist, album, img, url, duration FROM user_playlist_tracks "
         "WHERE playlist_id=? ORDER BY pos, created_at", (pid,)).fetchall()
-    return {"id": p["id"], "name": p["name"], "count": len(rows), "tracks": [_track_row_out(r) for r in rows]}
+    cov = p["cover"] if "cover" in p.keys() else None
+    return {"id": p["id"], "name": p["name"], "cover": cov, "count": len(rows), "tracks": [_track_row_out(r) for r in rows]}
+
+
+class CoverIn(BaseModel):
+    img: str | None = Field(None, max_length=700_000)
+
+
+@app.post("/api/me/playlists/{pid}/cover", tags=["Playlists"])
+def playlist_set_cover(pid: int, body: CoverIn, user: User, conn: Conn):
+    _owned_upl(conn, pid, user)
+    img = (body.img or "").strip() or None
+    if img and not img.startswith("data:image/"):
+        raise HTTPException(400, "Invalid image format.")
+    conn.execute("UPDATE user_playlists SET cover=? WHERE id=?", (img, pid))
+    conn.commit()
+    return {"id": pid, "cover": img is not None}
 
 
 @app.delete("/api/me/playlists/{pid}", tags=["Playlists"])

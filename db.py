@@ -94,6 +94,9 @@ class _PgConn:
     def commit(self):
         self._conn.commit()
 
+    def rollback(self):
+        self._conn.rollback()
+
     def close(self):
         self._conn.close()
 
@@ -144,6 +147,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     salt TEXT NOT NULL,
+    avatar TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -195,6 +199,7 @@ CREATE TABLE IF NOT EXISTS user_playlists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    cover TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -251,6 +256,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     salt TEXT NOT NULL,
+    avatar TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_nocase ON users (LOWER(username));
@@ -296,6 +302,7 @@ CREATE TABLE IF NOT EXISTS user_playlists (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    cover TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS user_playlist_tracks (
@@ -355,11 +362,29 @@ def user_from_token(conn: sqlite3.Connection, token: str):
 
 # ---------- seeding ----------
 
+def _migrate(conn):
+    """Idempotent column additions so existing databases (SQLite file or live Neon)
+    upgrade themselves automatically on startup."""
+    for tbl, col, typ in (("users", "avatar", "TEXT"), ("user_playlists", "cover", "TEXT")):
+        try:
+            if IS_PG:
+                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN IF NOT EXISTS {col} {typ}")
+            else:
+                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {typ}")
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass  # column already exists (SQLite has no IF NOT EXISTS for columns)
+
+
 def seed():
     import data
 
     conn = get_db()
     conn.executescript(SCHEMA_PG if IS_PG else SCHEMA)
+    _migrate(conn)
 
     if conn.execute("SELECT COUNT(*) c FROM songs").fetchone()["c"] > 0:
         conn.close()
@@ -383,26 +408,46 @@ def seed():
              s["duration"], s["emoji"], s["plays"], s["chart_rank"]),
         )
 
-    # demo account owns the "You" playlists and the classic liked songs
-    demo_salt = secrets.token_hex(16)
-    conn.execute(
-        "INSERT INTO users (id, username, display_name, password_hash, salt) VALUES (1, 'demo', 'Demo Listener', ?, ?)",
-        (hash_password("demo123", demo_salt), demo_salt),
-    )
-    for sid in data.LIKED_SONG_IDS:
-        conn.execute("INSERT INTO likes (user_id, song_id) VALUES (1, ?)", (sid,))
+    # catalog is in — commit it before the guarded sections below so a skipped
+    # section can never roll the catalog back
+    conn.commit()
 
-    for p in data.PLAYLISTS:
-        owner = None if p["creator"] == "SonicWave" else 1
+    # demo account owns the "You" playlists and the classic liked songs.
+    # Guarded: if a users row already exists (partially-initialised database),
+    # skip the demo account instead of crashing the whole seed.
+    try:
+        demo_salt = secrets.token_hex(16)
         conn.execute(
-            "INSERT INTO playlists (id, name, emoji, description, mood, owner_id) VALUES (?, ?, ?, ?, ?, ?)",
-            (p["id"], p["name"], p["emoji"], p["description"], p["mood"], owner),
+            "INSERT INTO users (id, username, display_name, password_hash, salt) VALUES (1, 'demo', 'Demo Listener', ?, ?)",
+            (hash_password("demo123", demo_salt), demo_salt),
         )
-        for pos, sid in enumerate(p["song_ids"], 1):
+        for sid in data.LIKED_SONG_IDS:
+            conn.execute("INSERT INTO likes (user_id, song_id) VALUES (1, ?)", (sid,))
+        conn.commit()
+    except IntegrityErrors:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+    try:
+        for p in data.PLAYLISTS:
+            owner = None if p["creator"] == "SonicWave" else 1
             conn.execute(
-                "INSERT INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)",
-                (p["id"], sid, pos),
+                "INSERT INTO playlists (id, name, emoji, description, mood, owner_id) VALUES (?, ?, ?, ?, ?, ?)",
+                (p["id"], p["name"], p["emoji"], p["description"], p["mood"], owner),
             )
+            for pos, sid in enumerate(p["song_ids"], 1):
+                conn.execute(
+                    "INSERT INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)",
+                    (p["id"], sid, pos),
+                )
+        conn.commit()
+    except IntegrityErrors:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
     if IS_PG:
         # explicit-id seed rows don't advance Postgres sequences — fix them so the
