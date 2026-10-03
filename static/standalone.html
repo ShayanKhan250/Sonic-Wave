@@ -272,6 +272,11 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 .getapp-pill:hover{border-color:var(--acc);transform:translateY(-1px)}
 @media (display-mode: standalone){.getapp-pill{display:none}}
 @media (max-width:700px){.getapp-pill span{display:none}.getapp-pill{padding:7px 10px}}
+.dl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.dl-card{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 6px;border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);font-size:17px;transition:border-color .15s,transform .15s,background .15s}
+.dl-card b{font-size:12.5px;font-weight:800}
+.dl-card span{font-size:10.5px;color:var(--dim)}
+.dl-card:hover{border-color:var(--acc);transform:translateY(-2px);background:rgba(124,58,237,.07)}
 .app-rows{display:flex;flex-direction:column;gap:7px}
 .app-row{display:flex;gap:10px;align-items:baseline;font-size:12px;line-height:1.45}
 .app-os{font-weight:800;min-width:104px;flex-shrink:0}
@@ -651,12 +656,16 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     <img src="/icon-192.png" alt="" style="width:64px;height:64px;border-radius:15px;display:block;margin:2px auto 12px;box-shadow:0 8px 24px rgba(124,58,237,.35)" onerror="this.style.display='none'"/>
     <button class="btn btn-grad mwide" id="app-install">⬇ Install on this device</button>
     <div class="err" id="app-hint" style="color:var(--muted);text-align:center"></div>
-    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">HOW IT WORKS ON YOUR DEVICE</div>
+    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">DOWNLOAD SETUP FILE</div>
+    <div class="dl-grid">
+      <a class="dl-card" id="dl-win" href="https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Setup.exe" download>🪟<b>Windows</b><span>.exe setup</span></a>
+      <a class="dl-card" id="dl-mac" href="https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-macOS.zip" download>🍎<b>macOS</b><span>.app bundle</span></a>
+      <a class="dl-card" id="dl-lin" href="https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Linux-Installer.sh" download>🐧<b>Linux</b><span>installer</span></a>
+    </div>
+    <div style="font-size:11px;color:var(--dim);margin:7px 0 0;line-height:1.5">Windows may show an "unknown publisher" screen — click <b style="color:var(--muted)">More info → Run anyway</b> (the app is unsigned, not unsafe). On Mac: right-click the app → Open.</div>
+    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">ON MOBILE</div>
     <div class="app-rows">
-      <div class="app-row"><span class="app-os">🪟 Windows</span><span class="app-how">Chrome / Edge → click <b>Install</b> in the address bar (or the button above)</span></div>
-      <div class="app-row"><span class="app-os">🍎 macOS</span><span class="app-how">Chrome → Install, or Safari → <b>File → Add to Dock</b></span></div>
-      <div class="app-row"><span class="app-os">🐧 Linux</span><span class="app-how">Chrome / Chromium → click <b>Install</b> in the address bar</span></div>
-      <div class="app-row"><span class="app-os">🤖 Android</span><span class="app-how">Chrome → menu ⋮ → <b>Install app</b> (or tap the button above)</span></div>
+      <div class="app-row"><span class="app-os">🤖 Android</span><span class="app-how">Chrome → tap <b>⬇ Install on this device</b> above — SonicWave is added to your apps</span></div>
       <div class="app-row"><span class="app-os">📱 iPhone / iPad</span><span class="app-how">Safari → Share <b>⎙</b> → <b>Add to Home Screen</b></span></div>
     </div>
     <div style="margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap">

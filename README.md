@@ -24,19 +24,28 @@
 
 No install needed — open **[sonicwave-gamma.vercel.app](https://sonicwave-gamma.vercel.app)**, create a free account (or sign in with Google) and start listening instantly.
 
-## ⬇ Download / Install the app
+## ⬇ Download
 
-SonicWave installs as a real app on **every platform** — no app store, no payment, ~1 MB:
+### Desktop setup files
+
+| Platform | Download | Notes |
+|---|---|---|
+| 🪟 **Windows 10 / 11** (x64) | **[SonicWave-Setup.exe](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Setup.exe)** | Run it once — installs SonicWave, adds Desktop + Start Menu shortcuts and opens the app. If SmartScreen appears: **More info → Run anyway** (unsigned, not unsafe) |
+| 🍎 **macOS** | **[SonicWave-macOS.zip](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-macOS.zip)** | Unzip → drag **SonicWave.app** to Applications → right-click → **Open** (first time only) |
+| 🐧 **Linux** | **[SonicWave-Linux-Installer.sh](https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Linux-Installer.sh)** | `bash SonicWave-Linux-Installer.sh` — adds SonicWave to your app menu with its icon |
+
+You can also grab the same files from the **Get App** button inside the [web player](https://sonicwave-gamma.vercel.app).
+
+### Mobile
 
 | Platform | How to install |
 |---|---|
-| 🪟 **Windows 10 / 11** | Open the [site](https://sonicwave-gamma.vercel.app) in **Chrome** or **Edge** → click the **Install** icon in the address bar (or **Get App** button in the top bar) |
-| 🍎 **macOS** | **Chrome** → Install icon in the address bar · **Safari** → File → **Add to Dock** |
-| 🐧 **Linux** | **Chrome / Chromium** → Install icon in the address bar |
-| 🤖 **Android** | **Chrome** → tap **⋮** → **Install app** |
+| 🤖 **Android** | Open the [site](https://sonicwave-gamma.vercel.app) in **Chrome** → tap **Install App** — SonicWave is added to your app drawer |
 | 📱 **iPhone / iPad** | **Safari** → **Share ⎙** → **Add to Home Screen** |
 
-The installed app opens in its own window with its own icon, works on your home screen / dock / task bar, and stays in sync with your account everywhere.
+### Or install straight from the browser (all desktops)
+
+Open the [site](https://sonicwave-gamma.vercel.app) in **Chrome/Edge** → click the **Install** icon in the address bar. The app opens in its own window, with its own icon in your task bar / dock, always in sync with your account.
 
 ## ✨ Features
 

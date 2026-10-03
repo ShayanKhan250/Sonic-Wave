@@ -173,6 +173,30 @@ def pwa_icon_apple():
 def pwa_logo():
     return FileResponse(os.path.join(STATIC_DIR, "logo-master.png"), media_type="image/png")
 
+
+# ---- Native app downloads (real setup files saved to the user's storage) ----
+
+_DL_DIR = os.path.join(STATIC_DIR, "downloads")
+
+
+@app.get("/download/windows", include_in_schema=False)
+def download_windows():
+    return FileResponse(os.path.join(_DL_DIR, "SonicWave-Setup.exe"),
+                        media_type="application/vnd.microsoft.portable-executable",
+                        filename="SonicWave-Setup.exe")
+
+
+@app.get("/download/mac", include_in_schema=False)
+def download_mac():
+    return FileResponse(os.path.join(_DL_DIR, "SonicWave-macOS.zip"),
+                        media_type="application/zip", filename="SonicWave-macOS.zip")
+
+
+@app.get("/download/linux", include_in_schema=False)
+def download_linux():
+    return FileResponse(os.path.join(_DL_DIR, "SonicWave-Linux-Installer.sh"),
+                        media_type="application/x-sh", filename="SonicWave-Linux-Installer.sh")
+
 @app.get("/legacy", response_class=HTMLResponse, include_in_schema=False)
 def legacy_website():
     return FileResponse(os.path.join(STATIC_DIR, "legacy.html"))
