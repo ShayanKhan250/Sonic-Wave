@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sonicwave
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false   # paste your Neon connection string in the Render dashboard
+      - key: PYTHON_VERSION
+        value: 3.12.6

@@ -1,0 +1,7 @@
+sonicwave.db
+__pycache__
+*.pyc
+DEPLOY.md
+render.yaml
+Dockerfile
+README.md
