@@ -138,6 +138,38 @@ def legacy_website():
 def standalone_website():
     return FileResponse(os.path.join(STATIC_DIR, "standalone.html"))
 
+
+_PRIVACY_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy Policy – SonicWave</title>
+<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b0b0f;color:#e8e8ee;max-width:720px;margin:0 auto;padding:48px 24px;line-height:1.7}
+h1{font-size:28px;background:linear-gradient(90deg,#ff2d78,#b84dff);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-size:17px;margin-top:28px;color:#fff}p,li{color:#b9b9c6;font-size:14.5px}a{color:#ff5e94}</style></head><body>
+<h1>SonicWave – Privacy Policy</h1>
+<p>Last updated: October 2026</p>
+<h2>What we collect</h2>
+<ul>
+<li><b>Account details:</b> a username and display name. Passwords are stored only as secure cryptographic hashes — we can never read them.</li>
+<li><b>Google sign-in:</b> if you sign in with Google, we receive your name and Google account identifier to create your account. We never see your Google password.</li>
+<li><b>Listening data:</b> songs you like, playlists you create, and plays used to build your recommendations.</li>
+</ul>
+<h2>What we do NOT do</h2>
+<ul>
+<li>We do not sell or share your personal data with anyone.</li>
+<li>We do not send marketing emails.</li>
+<li>We do not track you across other websites.</li>
+</ul>
+<h2>Third-party services</h2>
+<p>Music metadata, artwork, lyrics and charts come from public music catalogue APIs. Login forms are protected by Google reCAPTCHA, subject to the Google <a href="https://policies.google.com/privacy">Privacy Policy</a> and <a href="https://policies.google.com/terms">Terms of Service</a>.</p>
+<h2>Data removal</h2>
+<p>You can delete your playlists and likes at any time inside the app. To delete your entire account and all data, contact the site owner.</p>
+</body></html>"""
+
+
+@app.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+def privacy_policy():
+    return HTMLResponse(_PRIVACY_HTML)
+
 @app.get("/favicon-dark.svg", include_in_schema=False)
 def favicon_dark():
     return FileResponse(os.path.join(STATIC_DIR, "favicon-dark.svg"), media_type="image/svg+xml")
@@ -308,6 +340,55 @@ def login(body: LoginIn, conn: Conn, request: Request):
     token = db.issue_token(conn, user["id"])
     return {"user": {"id": user["id"], "username": user["username"], "display_name": user["display_name"]},
             "token": token, "token_type": "bearer"}
+
+
+# ---------- Sign in with Google ----------
+import secrets as _secrets
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+
+
+class GoogleIn(BaseModel):
+    credential: str = Field(min_length=20)
+
+
+@app.get("/api/auth/google/config", tags=["Auth"])
+def google_config():
+    """Tells the frontend whether Google sign-in is configured (and with which public client id)."""
+    return {"client_id": GOOGLE_CLIENT_ID or None}
+
+
+@app.post("/api/auth/google", tags=["Auth"])
+def google_login(body: GoogleIn, conn: Conn, request: Request):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(503, "Google sign-in is not configured on this server.")
+    _auth_guard(request, None)   # per-IP rate limit; Google's own token check replaces the captcha
+    try:
+        with httpx.Client(timeout=10) as c:
+            r = c.get("https://oauth2.googleapis.com/tokeninfo", params={"id_token": body.credential})
+    except httpx.HTTPError:
+        raise HTTPException(502, "Could not reach Google — please try again.")
+    if r.status_code != 200:
+        raise HTTPException(401, "Google sign-in failed — please try again.")
+    info = r.json()
+    if info.get("aud") != GOOGLE_CLIENT_ID or info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(401, "Google sign-in failed — please try again.")
+    sub = info.get("sub")
+    if not sub:
+        raise HTTPException(401, "Google sign-in failed — please try again.")
+    name = (info.get("name") or (info.get("email") or "Listener").split("@")[0]).strip()[:40] or "Listener"
+    username = f"google_{sub}"
+    row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    if row:
+        uid, display = row["id"], row["display_name"]
+    else:
+        # Google users get an unusable random password — they always sign in via Google.
+        uid = db.create_user(conn, username, _secrets.token_hex(24), name)
+        display = name
+    token = db.issue_token(conn, uid)
+    return {"user": {"id": uid, "username": username, "display_name": display},
+            "token": token, "token_type": "bearer"}
+
 
 @app.get("/api/auth/me", tags=["Auth"])
 def me(user: User, conn: Conn):

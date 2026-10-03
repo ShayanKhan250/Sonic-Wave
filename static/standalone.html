@@ -507,6 +507,14 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     <div id="captcha-note" style="display:none;font-size:10.5px;color:var(--dim);text-align:center;margin:2px 0 4px;line-height:1.5">🛡️ Protected by Google reCAPTCHA — <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">Privacy</a> · <a href="https://policies.google.com/terms" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">Terms</a></div>
     <div class="err" id="auth-err"></div>
     <button class="btn btn-grad mwide" id="auth-go">Log In</button>
+    <div id="gsi-wrap" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px">
+        <div style="flex:1;height:1px;background:rgba(128,128,128,.25)"></div>
+        <span style="font-size:10.5px;letter-spacing:.12em;color:var(--dim)">OR</span>
+        <div style="flex:1;height:1px;background:rgba(128,128,128,.25)"></div>
+      </div>
+      <div id="gsi-btn" style="display:flex;justify-content:center;min-height:40px"></div>
+    </div>
     <div style="text-align:center;margin-top:13px;font-size:12px;color:var(--muted)">Demo account: <b style="color:var(--text)">demo / demo123</b></div>
   </div>
 </div>
@@ -1279,7 +1287,51 @@ if (captchaActive) {
   });
 }
 
-function openAuth(mode = "login") { setAuthMode(mode); $("#auth-overlay").classList.add("open"); $("#auth-user").focus(); loadCaptcha(); }
+function openAuth(mode = "login") { setAuthMode(mode); $("#auth-overlay").classList.add("open"); $("#auth-user").focus(); loadCaptcha(); loadGoogleAuth().then(ok => { const w = $("#gsi-wrap"); if (w) w.style.display = ok ? "" : "none"; }).catch(() => {}); }
+
+/* ---------- Sign in with Google ---------- */
+let _gsiReady = null;
+async function loadGoogleAuth() {
+  if (_gsiReady !== null) return _gsiReady;
+  _gsiReady = (async () => {
+    let cfg = null;
+    try { cfg = await api("/api/auth/google/config"); } catch (e) { return false; }
+    if (!cfg || !cfg.client_id) return false;
+    await new Promise((res) => {
+      if (window.google && window.google.accounts && window.google.accounts.id) return res();
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
+      s.onload = res; s.onerror = res;
+      document.head.appendChild(s);
+      setTimeout(res, 6000);
+    });
+    if (!(window.google && window.google.accounts && window.google.accounts.id)) return false;
+    try {
+      google.accounts.id.initialize({ client_id: cfg.client_id, callback: onGoogleCred });
+      const dark = document.documentElement.dataset.theme !== "light";
+      google.accounts.id.renderButton($("#gsi-btn"), {
+        theme: dark ? "filled_black" : "outline", size: "large", shape: "pill",
+        text: "continue_with", logo_alignment: "left", width: 280
+      });
+      return true;
+    } catch (e) { return false; }
+  })();
+  return _gsiReady;
+}
+async function onGoogleCred(resp) {
+  const errEl = $("#auth-err"); if (errEl) errEl.textContent = "";
+  let d;
+  try {
+    d = await api("/api/auth/google", { method: "POST", body: { credential: resp.credential } });
+  } catch (e) { if (errEl) errEl.textContent = e.message; return; }
+  S.token = d.token; localStorage.setItem("sw_token", d.token);
+  S.user = { ...d.user };
+  try { await loadUser(); } catch (e) {}
+  if (!S.user) S.user = { ...d.user };
+  renderAuthUI(); closeAuth(); updateGate();
+  toast(`Welcome, ${d.user.display_name}!`);
+  setView("home");
+}
 function closeAuth() { $("#auth-overlay").classList.remove("open"); $("#auth-err").textContent = ""; }
 function setAuthMode(m) {
   authMode = m;
