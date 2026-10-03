@@ -344,6 +344,8 @@ def api_landing():
       <li><code>GET /api/music/search?q=Pathaan&engine=gaama</code> — search real songs (engines: auto/saavn = FULL songs via JioSaavn, plus deezer, itunes, gaama, seevn, hunjama, mtmusic, wunk — auto-falls back if a provider is down)</li>
       <li><code>GET /api/music/lyrics?id=…</code> — lyrics (gaama only)</li>
       <li><code>GET /api/music/fetch?id=…</code> — stream / mp3 link</li>
+      <li><code>GET /api/stream/candidates?title=…&artist=…</code> — streaming engine phase 1: ranked stream candidates from every provider (JioSaavn, YouTube Music, Audius)</li>
+      <li><code>GET /api/stream/resolve?id=…</code> — streaming engine phase 2: just-in-time playable URL with caching, expiry and retries</li>
     </ul>
     <h2>📚 Catalog</h2><ul>
       <li><code>GET /api/songs</code> (?genre= ?artist= ?q=) · <code>GET /api/songs/{id}</code></li>
@@ -589,7 +591,7 @@ def logout(user: User, conn: Conn, authorization: str = Header(...)):
 # Fallback: iTunes + Deezer (used automatically when x007 is unreachable)
 
 X007_ENGINES = {"gaama", "seevn", "hunjama", "mtmusic", "wunk"}
-ALL_ENGINES = X007_ENGINES | {"itunes", "deezer", "saavn", "yt", "auto"}
+ALL_ENGINES = X007_ENGINES | {"itunes", "deezer", "saavn", "yt", "audius", "auto"}
 SAAVN_API = "https://saavn-api.nandanvarma.com/api"
 
 import html as _html
@@ -806,6 +808,19 @@ async def music_search(
                                 " + ".join(n for s, n in (("saavn", "JioSaavn"), ("yt", "YouTube Music")) if s in srcs) + "."}
             note = "Saavn and YouTube Music returned no results — fell back to Deezer previews."
             engine = "deezer"
+        if engine == "audius":
+            raw = await _audius_search(client, q, limit)
+            results = [{"id": c["id"], "title": c["title"], "artist": c.get("artist"),
+                        "album": None, "img": c.get("thumbnail"),
+                        "preview_url": _audius_stream_url(c["id"].split(":", 1)[1]),
+                        "duration": (f"{c['durationMs'] // 60000}:{c['durationMs'] % 60000 // 1000:02d}"
+                                     if c.get("durationMs") else None),
+                        "full": True, "source": "audius"} for c in raw]
+            if results:
+                return {"query": q, "engine": "audius", "count": len(results), "results": results,
+                        "note": "Full-length songs via Audius (independent artists)."}
+            note = "Audius returned no results — fell back to Deezer previews."
+            engine = "deezer"
         if engine in X007_ENGINES:
             try:
                 results = await _x007_search(client, q, engine)
@@ -871,6 +886,12 @@ async def music_fetch(id: str = Query(..., description="Song ID from /api/music/
                     raise HTTPException(400, "Invalid YouTube video id.")
                 return {"id": id, "stream_url": f"/api/yt/audio/{vid}", "type": "direct_file",
                         "note": "Full-length song via YouTube Music (server-relayed audio)."}
+            if id.startswith("audius:"):
+                tid = id.split(":", 1)[1]
+                if not _re.fullmatch(r"[A-Za-z0-9]{3,24}", tid):
+                    raise HTTPException(400, "Invalid Audius track id.")
+                return {"id": id, "stream_url": _audius_stream_url(tid), "type": "direct_file",
+                        "note": "Full-length song via Audius."}
             if id.startswith("itunes:"):
                 data_ = await _get_json(client, "https://itunes.apple.com/lookup", {"id": id.split(":", 1)[1]})
                 results = data_.get("results") or []
@@ -892,6 +913,215 @@ async def music_fetch(id: str = Query(..., description="Song ID from /api/music/
     url = data_.get("response")
     kind = "hls_stream" if isinstance(url, str) and ".m3u8" in url else "direct_file"
     return {"id": id, "stream_url": url, "type": kind}
+
+
+# ---------- Streaming Engine (Nuclear-inspired two-phase resolution) ----------
+# Modeled on Nuclear's Streaming API (docs.nuclearplayer.com):
+#   Phase 1  /api/stream/candidates  — discover potential sources across providers
+#   Phase 2  /api/stream/resolve     — resolve the playable URL just-in-time
+# Resolved streams carry url/protocol/mimeType/bitrateKbps/codec/qualityLabel,
+# are cached with an expiry window (STREAM_EXPIRY_MS, like core.playback.streamExpiryMs)
+# and retried up to STREAM_RETRIES times (like core.playback.streamResolutionRetries)
+# before a candidate is marked failed. Providers: JioSaavn, YouTube Music, Audius.
+
+import asyncio as _asyncio
+
+AUDIUS_HOST = "https://api.audius.co"
+STREAM_EXPIRY_MS = 60 * 60 * 1000            # 1 hour, like Nuclear's default
+STREAM_RETRIES = 3                           # like Nuclear's default
+_STREAM_CACHE: dict = {}                     # candidate id -> (resolved_at_ms, stream dict)
+
+
+def _mk_stream(url, protocol="https", mime=None, kbps=None, codec=None, label=None):
+    return {"url": url, "protocol": protocol, "mimeType": mime,
+            "bitrateKbps": kbps, "codec": codec, "qualityLabel": label}
+
+
+def _dur_to_ms(d):
+    """'3:45' / seconds / None -> milliseconds or None."""
+    if not d:
+        return None
+    try:
+        if isinstance(d, (int, float)):
+            return int(d) * 1000
+        s = 0
+        for part in str(d).split(":"):
+            s = s * 60 + int(part)
+        return s * 1000
+    except (TypeError, ValueError):
+        return None
+
+
+def _norm_tokens(s):
+    s = _re.sub(r"[\(\[\{].*?[\)\]\}]", " ", (s or "").lower())
+    return set(_re.findall(r"[a-z0-9]+", s))
+
+
+def _cand_score(want_title, want_artist, want_ms, cand):
+    """Rank candidates: title match > artist match > duration proximity > provider."""
+    wt, wa = _norm_tokens(want_title), _norm_tokens(want_artist)
+    ct = _norm_tokens(cand.get("title")) | _norm_tokens(cand.get("artist"))
+    score = 0.0
+    if wt:
+        score += 60.0 * len(wt & ct) / len(wt)
+    if wa:
+        score += 25.0 * len(wa & ct) / len(wa)
+    cms = cand.get("durationMs")
+    if want_ms and cms:
+        diff_s = abs(want_ms - cms) / 1000.0
+        score += max(0.0, 15.0 - min(15.0, diff_s / 2.0))    # full bonus at 0s, none at ±30s
+    prov = (cand.get("source") or {}).get("provider")
+    score += {"saavn": 6.0, "yt": 4.0, "audius": 0.0}.get(prov, 0.0)
+    return round(score, 2)
+
+
+async def _audius_search(client, q: str, limit: int = 6):
+    try:
+        r = await client.get(f"{AUDIUS_HOST}/v1/tracks/search",
+                             params={"query": q, "app_name": "SonicWave"})
+        r.raise_for_status()
+        out = []
+        for t in (r.json().get("data") or [])[: max(1, limit)]:
+            if t.get("is_streamable") is False or not t.get("id"):
+                continue
+            art = t.get("artwork") or {}
+            out.append({
+                "id": f"audius:{t['id']}",
+                "title": _html.unescape(t.get("title") or ""),
+                "artist": (t.get("user") or {}).get("name"),
+                "durationMs": (int(t.get("duration") or 0) * 1000) or None,
+                "thumbnail": art.get("480x480") or art.get("150x150"),
+                "source": {"provider": "audius", "name": "Audius"},
+            })
+        return out
+    except Exception:
+        return []
+
+
+def _audius_stream_url(tid: str) -> str:
+    return f"{AUDIUS_HOST}/v1/tracks/{tid}/stream?app_name=SonicWave"
+
+
+@app.get("/api/stream/candidates", tags=["Streaming"])
+async def stream_candidates(
+    title: str = Query(..., min_length=1, description="Track title"),
+    artist: str = Query("", description="Artist name(s)"),
+    duration_ms: int = Query(0, ge=0, description="Known duration in ms (improves ranking)"),
+    limit: int = Query(12, ge=1, le=30),
+):
+    """Phase 1 — search every streaming provider for candidates matching the track."""
+    main_artist = _re.split(r",|&|feat\.?", artist, flags=_re.I)[0].strip()
+    q = f"{title} {main_artist}".strip()
+    now_iso = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+    async with httpx.AsyncClient(timeout=20) as client:
+        saavn, yt, audius = await _asyncio.gather(
+            _saavn_search(client, q, 8), _yt_search(client, q, 5), _audius_search(client, q, 6),
+            return_exceptions=True)
+    cands = []
+    for t in (saavn if isinstance(saavn, list) else []):
+        cands.append({
+            "id": t["id"], "title": t["title"], "artist": t.get("artist"),
+            "durationMs": _dur_to_ms(t.get("duration")), "thumbnail": t.get("img"),
+            "source": {"provider": "saavn", "name": "JioSaavn"},
+            "stream": _mk_stream(t["preview_url"], mime="audio/mp4", kbps=320,
+                                 codec="aac", label="320 kbps"),
+            "lastResolvedAtIso": now_iso, "failed": False,
+        })
+    for t in (yt if isinstance(yt, list) else []):
+        cands.append({
+            "id": t["id"], "title": t["title"], "artist": t.get("artist"),
+            "durationMs": _dur_to_ms(t.get("duration")), "thumbnail": t.get("img"),
+            "source": {"provider": "yt", "name": "YouTube Music"},
+            "stream": None, "lastResolvedAtIso": None, "failed": False,
+        })
+    for c in (audius if isinstance(audius, list) else []):
+        c = dict(c)
+        c["stream"] = _mk_stream(_audius_stream_url(c["id"].split(":", 1)[1]),
+                                 mime="audio/mpeg", codec="mp3", label="MP3")
+        c["lastResolvedAtIso"] = now_iso
+        c["failed"] = False
+        cands.append(c)
+    for c in cands:
+        c["score"] = _cand_score(title, artist, duration_ms or None, c)
+    cands.sort(key=lambda c: c["score"], reverse=True)
+    cands = cands[:limit]
+    if not cands:
+        return {"success": False, "error": "No streaming provider returned candidates.",
+                "candidates": []}
+    return {"success": True, "query": q, "candidates": cands,
+            "providers": {"saavn": isinstance(saavn, list) and len(saavn) or 0,
+                          "yt": isinstance(yt, list) and len(yt) or 0,
+                          "audius": isinstance(audius, list) and len(audius) or 0},
+            "settings": {"streamExpiryMs": STREAM_EXPIRY_MS,
+                         "streamResolutionRetries": STREAM_RETRIES}}
+
+
+async def _resolve_stream_once(id: str) -> dict:
+    """Resolve one candidate id into a Stream dict. Raises on failure."""
+    async with httpx.AsyncClient(timeout=20) as client:
+        if id.startswith("saavn:"):
+            sid = id.split(":", 1)[1]
+            track = None
+            try:
+                data_ = await _get_json(client, f"{SAAVN_API}/songs/{sid}", {})
+                items = data_.get("data") or []
+                track = _saavn_map(items[0]) if items else None
+            except Exception:
+                track = None
+            if not track or not track.get("preview_url"):
+                r = await client.get(SAAVN_NATIVE,
+                                     params={"__call": "song.getDetails", "pids": sid,
+                                             "_format": "json", "_marker": "0",
+                                             "api_version": "4", "ctx": "web6dot0"},
+                                     headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+                                     follow_redirects=True)
+                r.raise_for_status()
+                item = (r.json().get("songs") or [None])[0]
+                track = _native_map(item) if item else None
+            if not track or not track.get("preview_url"):
+                raise HTTPException(404, "No stream available for this Saavn track.")
+            return _mk_stream(track["preview_url"], mime="audio/mp4", kbps=320,
+                              codec="aac", label="320 kbps")
+        if id.startswith("yt:"):
+            vid = id.split(":", 1)[1]
+            if not _re.fullmatch(r"[A-Za-z0-9_-]{6,20}", vid):
+                raise HTTPException(400, "Invalid YouTube video id.")
+            return _mk_stream(f"/api/yt/audio/{vid}", mime="audio/mp4",
+                              codec="m4a", label="YT Audio")
+        if id.startswith("audius:"):
+            tid = id.split(":", 1)[1]
+            if not _re.fullmatch(r"[A-Za-z0-9]{3,24}", tid):
+                raise HTTPException(400, "Invalid Audius track id.")
+            return _mk_stream(_audius_stream_url(tid), mime="audio/mpeg",
+                              codec="mp3", label="MP3")
+    raise HTTPException(404, "Unknown candidate id — expected saavn:/yt:/audius: prefix.")
+
+
+@app.get("/api/stream/resolve", tags=["Streaming"])
+async def stream_resolve(id: str = Query(..., description="Candidate id from /api/stream/candidates")):
+    """Phase 2 — resolve the playable URL for a candidate, with caching + retries."""
+    now_ms = int(_time.time() * 1000)
+    hit = _STREAM_CACHE.get(id)
+    if hit and now_ms - hit[0] < STREAM_EXPIRY_MS:
+        return {"id": id, "stream": hit[1], "cached": True,
+                "resolvedAtMs": hit[0], "expiresAtMs": hit[0] + STREAM_EXPIRY_MS}
+    last_err = None
+    for _attempt in range(STREAM_RETRIES):
+        try:
+            stream = await _resolve_stream_once(id)
+            if len(_STREAM_CACHE) > 400:           # keep the cache bounded
+                for k in sorted(_STREAM_CACHE, key=lambda k: _STREAM_CACHE[k][0])[:100]:
+                    _STREAM_CACHE.pop(k, None)
+            _STREAM_CACHE[id] = (now_ms, stream)
+            return {"id": id, "stream": stream, "cached": False,
+                    "resolvedAtMs": now_ms, "expiresAtMs": now_ms + STREAM_EXPIRY_MS}
+        except HTTPException as e:
+            last_err = e.detail
+            if e.status_code in (400, 404):        # permanent — retrying won't help
+                break
+        except Exception as e:
+            last_err = str(e) or type(e).__name__
+    return {"id": id, "failed": True, "error": last_err or "Stream resolution failed."}
 
 
 # ---------- catalog: songs ----------

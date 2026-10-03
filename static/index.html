@@ -245,6 +245,7 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 #pb-title:hover{text-decoration:underline}
 #pb-artist{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;cursor:pointer}
 #pb-artist:hover{color:var(--text);text-decoration:underline}
+#pb-quality{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-top:3px;white-space:nowrap}
 #pb-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
 #pb-ctrl{display:flex;align-items:center;gap:8px}
 .pcbtn{width:33px;height:33px;border-radius:50%;display:grid;place-items:center;color:var(--muted);transition:color .15s,transform .12s}
@@ -436,6 +437,7 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
       <div style="min-width:0">
         <div id="pb-title">Nothing playing</div>
         <div id="pb-artist">Pick a song to start</div>
+        <span id="pb-quality" title="Stream source and quality" style="display:none"></span>
         <span class="atmos-badge" title="Dolby Atmos spatial audio is on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 8v8"/><path d="M10 5v14"/><path d="M14 8v8"/><path d="M18 10v4"/></svg>ATMOS</span>
       </div>
       <button class="iconbtn" id="pb-like" title="Like" data-ic="heart"></button>
@@ -1172,6 +1174,99 @@ function pushRecent(t) {
 const getRecent = () => { try { return JSON.parse(localStorage.getItem("sw_recent") || "[]"); } catch (e) { return []; } };
 
 let playSeq = 0;
+/* ---------- Streaming engine (Nuclear-style two-phase resolution) ----------
+   Phase 1: streamCandidates(track)  -> ranked candidates from every provider
+   Phase 2: resolveCandidate(cand)   -> fresh copy with .stream populated (or .failed)
+   Streams expire after STREAM_EXPIRY_MS and are re-resolved just-in-time;
+   playback errors automatically fall back to the next best candidate. */
+const STREAM_EXPIRY_MS = 60 * 60 * 1000;
+const _scCache = new Map();                         // trackKey -> {ts, candidates}
+const _scKey = t => ((t.title || "") + "|" + (t.artist || "")).toLowerCase().trim();
+const PROVIDER_NAMES = { saavn: "JioSaavn", yt: "YouTube", audius: "Audius" };
+function durToMs(d) {
+  if (!d) return 0;
+  const p = String(d).split(":").map(Number);
+  if (p.some(isNaN)) return 0;
+  return p.reduce((a, b) => a * 60 + b, 0) * 1000;
+}
+async function streamCandidates(track, fresh = false) {
+  const k = _scKey(track);
+  if (!fresh) {
+    const hit = _scCache.get(k);
+    if (hit && Date.now() - hit.ts < 10 * 60 * 1000) return hit.candidates;
+  }
+  const qs = new URLSearchParams({ title: track.title || "", artist: track.artist || "" });
+  const ms = durToMs(track.duration);
+  if (ms) qs.set("duration_ms", ms);
+  let cands = [];
+  try {
+    const d = await api(`/api/stream/candidates?${qs.toString()}`);
+    cands = (d && d.candidates) || [];
+  } catch (e) { cands = []; }
+  _scCache.set(k, { ts: Date.now(), candidates: cands });
+  return cands;
+}
+async function resolveCandidate(c) {
+  if (!c || c.failed) return c;                                    // no retry on permanent failure
+  const fresh = c._resolvedAt ? (Date.now() - c._resolvedAt < STREAM_EXPIRY_MS) : true;
+  if (c.stream && c.stream.url && fresh) return c;                 // cached, non-expired
+  try {
+    const d = await api(`/api/stream/resolve?id=${encodeURIComponent(c.id)}`);
+    if (d && d.stream && d.stream.url) return { ...c, stream: d.stream, _resolvedAt: Date.now(), failed: false };
+  } catch (e) {}
+  return { ...c, failed: true };
+}
+function setStreamMeta(meta) {
+  S.streamMeta = meta || null;
+  const el = $("#pb-quality");
+  if (!el) return;
+  const txt = meta ? [meta.qualityLabel, meta.sourceName].filter(Boolean).join(" · ") : "";
+  el.textContent = txt;
+  el.style.display = txt ? "" : "none";
+}
+function metaForTrack(track) {
+  const src = String(track.id || "").split(":")[0];
+  if (src === "saavn") return { qualityLabel: "320 kbps", sourceName: "JioSaavn" };
+  if (src === "yt") return { qualityLabel: "YT Audio", sourceName: "YouTube" };
+  if (src === "audius") return { qualityLabel: "MP3", sourceName: "Audius" };
+  return null;
+}
+function metaForCand(c) {
+  return { qualityLabel: (c.stream && c.stream.qualityLabel) || null,
+           sourceName: ((c.source && (c.source.name || PROVIDER_NAMES[c.source.provider])) || null) };
+}
+/* Walk the candidate list for a track, skipping ids already tried; returns
+   {url, cand} for the first successfully resolved stream, or null. */
+async function nextStreamFor(track, tried, seq) {
+  let cands = [];
+  try { cands = await streamCandidates(track); } catch (e) {}
+  for (const c0 of cands) {
+    if (seq !== undefined && seq !== playSeq) return null;
+    if (!c0 || tried.has(c0.id)) continue;
+    tried.add(c0.id);
+    const c = await resolveCandidate(c0);
+    if (c && !c.failed && c.stream && c.stream.url) return { url: c.stream.url, cand: c };
+  }
+  return null;
+}
+/* Re-resolve the current track's stream (used when a stream expires while
+   paused, or when playback errors): keeps the listening position. */
+async function refreshCurrentStream(fromErrorHandler = false) {
+  const cur = S.current;
+  if (!cur) return false;
+  const pos = audio.currentTime || 0;
+  const tried = S.triedCands || (S.triedCands = new Set());
+  if (fromErrorHandler) _scCache.delete(_scKey(cur));              // force a fresh provider search
+  const got = await nextStreamFor(cur, tried);
+  if (!got || S.current !== cur) return false;
+  audio.src = got.url;
+  try { if (pos > 1 && pos < (audio.duration || Infinity)) audio.currentTime = pos; } catch (e) {}
+  audio.play().catch(() => {});
+  S.urlAt = Date.now();
+  setStreamMeta(metaForCand(got.cand));
+  return true;
+}
+
 async function playTrack(track, ctx = null, idx = -1) {
   if (ctx) { S.ctx = ctx; S.idx = idx; }
   S.current = track; S.playing = true;
@@ -1185,7 +1280,9 @@ async function playTrack(track, ctx = null, idx = -1) {
   if (S.user) api("/api/me/plays", { method: "POST", body: trackBody(track) }).catch(() => {});
   loadLyricsFor(track);
   const seq = ++playSeq;
+  S.triedCands = new Set(); S.rescueCount = 0; setStreamMeta(null);
   let url = track.preview_url || null;
+  let meta = url ? metaForTrack(track) : null;
   // Chart entries have no stream, and preview-only tracks (full:false) deserve better:
   // both get resolved to a REAL full-length stream by searching title + artist.
   if ((!url && track.source === "chart") || track.full === false) {
@@ -1202,6 +1299,7 @@ async function playTrack(track, ctx = null, idx = -1) {
         if (seq !== playSeq) return;
         if (u2) {
           url = u2;
+          meta = metaForTrack(hit);
           S.current = { ...hit, title: track.title, artist: track.artist, img: track.img || hit.img };
           updatePlayerUI(); highlightRows();
         }
@@ -1209,10 +1307,19 @@ async function playTrack(track, ctx = null, idx = -1) {
     } catch (e) {}
   }
   if (!url && track.id) {
-    try { const f = await api(`/api/music/fetch?id=${encodeURIComponent(track.id)}`); url = f.stream_url; } catch (e) {}
+    try { const f = await api(`/api/music/fetch?id=${encodeURIComponent(track.id)}`); url = f.stream_url; meta = metaForTrack(track); } catch (e) {}
+  }
+  if (!url) {
+    // Nuclear-style two-phase fallback: search every provider for candidates,
+    // then resolve the best one just-in-time.
+    const got = await nextStreamFor(S.current || track, S.triedCands, seq);
+    if (seq !== playSeq) return;
+    if (got) { url = got.url; meta = metaForCand(got.cand); }
   }
   if (seq !== playSeq) return;
   if (!url) { toast("Couldn't load this song — try another"); S.playing = false; updatePlayerUI(); return; }
+  S.urlAt = Date.now();
+  setStreamMeta(meta);
   audio.src = url;
   audio.play().catch(() => {});
   if (S.atmos) { if (!atmosReady) setAtmos(true, true); else AC.resume().catch(() => {}); }
@@ -1228,6 +1335,13 @@ function togglePlay() {
   }
   if (audio.paused && audio.src) {
     if (S.atmos) { if (!atmosReady) setAtmos(true, true); else AC.resume().catch(() => {}); }
+    // Stream URLs expire (like Nuclear's streamExpiryMs): if this one sat
+    // paused past the window, re-resolve it fresh and keep the position.
+    if (S.urlAt && Date.now() - S.urlAt > STREAM_EXPIRY_MS && S.current) {
+      S.triedCands = new Set();
+      refreshCurrentStream(true).then(ok => { if (!ok) audio.play().catch(() => {}); });
+      return;
+    }
     audio.play().catch(()=>{});
   } else audio.pause();
 }
@@ -1257,7 +1371,6 @@ audio.addEventListener("ended", () => {
   nextTrack();
 });
 let _corsRetried = "";
-let _ytRescued = "";
 audio.addEventListener("error", async () => {
   if (!S.current || !audio.src) return;
   // rare CDN without CORS: retry once in plain mode (only safe while the Atmos graph isn't attached)
@@ -1267,18 +1380,17 @@ audio.addEventListener("error", async () => {
     audio.crossOrigin = null; audio.src = u; audio.play().catch(() => {});
     return;
   }
-  // YouTube relay unavailable: silently re-resolve the SAME song via the main catalog
+  // Nuclear-style rescue: mark this source as tried, then silently fall back
+  // to the next best stream candidate for the SAME song (any provider).
   const cur = S.current;
-  if (cur && String(cur.id).startsWith("yt:") && _ytRescued !== cur.id) {
-    _ytRescued = cur.id;
-    try {
-      const hits = await musicSearch(`${cur.title} ${cur.artist || ""}`.trim(), 6);
-      const alt = (hits || []).find(h => !String(h.id).startsWith("yt:") && (h.preview_url || h.stream));
-      if (alt && S.current === cur) {
-        const url = alt.stream || alt.preview_url;
-        if (url) { audio.src = url; audio.play().catch(() => {}); return; }
-      }
-    } catch (e) {}
+  if (cur) {
+    S.rescueCount = (S.rescueCount || 0) + 1;
+    if (S.rescueCount <= 6) {   // each candidate may also get one same-URL CORS retry
+      const curSrc = String(cur.id || "");
+      if (curSrc.includes(":")) (S.triedCands || (S.triedCands = new Set())).add(curSrc);
+      const ok = await refreshCurrentStream(true);
+      if (ok && S.current === cur) return;
+    }
   }
   toast("Stream error — skipping"); nextTrack();
 });
@@ -1438,6 +1550,7 @@ $("#set-country").onchange = () => {
 /* (global keyboard shortcuts live in the dedicated handler near the player controls) */
 function updatePlayerUI() {
   const t = S.current;
+  if (!t) setStreamMeta(null);
   $("#pb-title").textContent = t ? t.title : "Nothing playing";
   $("#pb-artist").textContent = t ? (t.artist || "") : "Pick a song to start";
   $("#pb-play").innerHTML = S.playing ? ICONS.pause : ICONS.play;
