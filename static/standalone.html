@@ -4,6 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SonicWave (Standalone) – Feel Every Beat</title>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#0d0f1a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SonicWave"/>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23fa2d48'/%3E%3Cstop offset='1' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M24 46V20l20-4v24' stroke='white' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='19' cy='46' r='5' fill='white'/%3E%3Ccircle cx='39' cy='40' r='5' fill='white'/%3E%3C/svg%3E" type="image/svg+xml"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -246,6 +253,17 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 #pb-artist{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;cursor:pointer}
 #pb-artist:hover{color:var(--text);text-decoration:underline}
 #pb-quality{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-top:3px;white-space:nowrap}
+.getapp-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:7px 13px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:border-color .15s,transform .15s;font-family:inherit}
+.getapp-pill svg{width:14px;height:14px}
+.getapp-pill:hover{border-color:var(--acc);transform:translateY(-1px)}
+@media (display-mode: standalone){.getapp-pill{display:none}}
+@media (max-width:700px){.getapp-pill span{display:none}.getapp-pill{padding:7px 10px}}
+.app-rows{display:flex;flex-direction:column;gap:7px}
+.app-row{display:flex;gap:10px;align-items:baseline;font-size:12px;line-height:1.45}
+.app-os{font-weight:800;min-width:104px;flex-shrink:0}
+.app-how{color:var(--muted)}
+.app-how b{color:var(--text)}
+@media (max-width:560px){.app-os{min-width:88px}}
 #pb-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
 #pb-ctrl{display:flex;align-items:center;gap:8px}
 .pcbtn{width:33px;height:33px;border-radius:50%;display:grid;place-items:center;color:var(--muted);transition:color .15s,transform .12s}
@@ -423,6 +441,7 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
       <button class="navarrow" id="nav-back" data-ic="chevl"></button>
       <button class="navarrow" id="nav-fwd" data-ic="chevr"></button>
       <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <button class="getapp-pill" id="getapp-btn" title="Install SonicWave as an app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 19h16"/></svg><span>Get App</span></button>
         <button id="theme-btn" title="Dark / Light" data-ic="sun"></button>
         <button id="set-btn" title="Settings" data-ic="gear"></button>
         <div id="authbtns" style="display:flex;gap:10px;align-items:center"></div>
@@ -590,12 +609,42 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     </div>
     <div class="set-row">
       <div class="set-info">
+        <div class="set-t">SonicWave App</div>
+        <div class="set-d">Install SonicWave on your phone or computer — listen like a real app.</div>
+      </div>
+      <button class="btn" id="set-getapp" style="font-size:12px;padding:8px 14px;border:1px solid var(--border);border-radius:99px;background:transparent;color:var(--text);cursor:pointer">Get the app</button>
+    </div>
+    <div class="set-row">
+      <div class="set-info">
         <div class="set-t">Privacy &amp; cookies</div>
         <div class="set-d">Read the <a href="/privacy" target="_blank" rel="noopener" style="color:var(--acc)">Privacy Policy</a> or change your cookie choice.</div>
       </div>
       <button class="btn" id="set-cookies" style="font-size:12px;padding:8px 14px;border:1px solid var(--border);border-radius:99px;background:transparent;color:var(--text);cursor:pointer">Manage</button>
     </div>
     <button class="btn btn-grad mwide" id="set-done" style="margin-top:6px">Done</button>
+  </div>
+</div>
+
+<div class="overlay" id="app-overlay">
+  <div class="modal" style="max-width:430px">
+    <h2>Get SonicWave</h2>
+    <div class="msub">Listen online — or install it as a real app on any device. Free, no store needed.</div>
+    <img src="/icon-192.png" alt="" style="width:64px;height:64px;border-radius:15px;display:block;margin:2px auto 12px;box-shadow:0 8px 24px rgba(124,58,237,.35)" onerror="this.style.display='none'"/>
+    <button class="btn btn-grad mwide" id="app-install">⬇ Install on this device</button>
+    <div class="err" id="app-hint" style="color:var(--muted);text-align:center"></div>
+    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">HOW IT WORKS ON YOUR DEVICE</div>
+    <div class="app-rows">
+      <div class="app-row"><span class="app-os">🪟 Windows</span><span class="app-how">Chrome / Edge → click <b>Install</b> in the address bar (or the button above)</span></div>
+      <div class="app-row"><span class="app-os">🍎 macOS</span><span class="app-how">Chrome → Install, or Safari → <b>File → Add to Dock</b></span></div>
+      <div class="app-row"><span class="app-os">🐧 Linux</span><span class="app-how">Chrome / Chromium → click <b>Install</b> in the address bar</span></div>
+      <div class="app-row"><span class="app-os">🤖 Android</span><span class="app-how">Chrome → menu ⋮ → <b>Install app</b> (or tap the button above)</span></div>
+      <div class="app-row"><span class="app-os">📱 iPhone / iPad</span><span class="app-how">Safari → Share <b>⎙</b> → <b>Add to Home Screen</b></span></div>
+    </div>
+    <div style="margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap">
+      <a class="btn btn-ghost btn-sm" href="https://github.com/ShayanKhan250/Sonic-Wave" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>View on GitHub</a>
+      <a class="btn btn-ghost btn-sm" href="https://github.com/ShayanKhan250/Sonic-Wave?tab=readme-ov-file" target="_blank" rel="noopener" style="text-decoration:none">Desktop downloads ↗</a>
+    </div>
+    <button class="btn mwide" id="app-close" style="margin-top:12px;background:transparent;border:1px solid var(--border);color:var(--text)">Close</button>
   </div>
 </div>
 
@@ -1531,6 +1580,63 @@ $("#prof-delgo").onclick = async () => {
   toast("Account deleted. Goodbye 👋");
   setTimeout(() => location.reload(), 700);
 };
+
+/* ---------- Get the App (PWA install) ---------- */
+let deferredInstall = null;
+const isStandalone = () =>
+  (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+});
+window.addEventListener("appinstalled", () => {
+  deferredInstall = null;
+  const b = $("#getapp-btn"); if (b) b.style.display = "none";
+  $("#app-overlay").classList.remove("open");
+  toast("SonicWave installed! Find it on your home screen 🎉");
+});
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+}
+function appPlatform() {
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
+  if (/Android/i.test(ua)) return "android";
+  if (/Mac/i.test(ua)) return "mac";
+  if (/Linux/i.test(ua)) return "linux";
+  return "windows";
+}
+function openGetApp() {
+  $("#app-hint").textContent = "";
+  if (isStandalone()) $("#app-hint").textContent = "You're already using the installed app ✔";
+  $("#app-overlay").classList.add("open");
+}
+$("#getapp-btn").onclick = openGetApp;
+$("#set-getapp").onclick = () => { $("#set-overlay").classList.remove("open"); openGetApp(); };
+$("#app-close").onclick = () => $("#app-overlay").classList.remove("open");
+$("#app-overlay").addEventListener("click", e => { if (e.target.id === "app-overlay") $("#app-overlay").classList.remove("open"); });
+$("#app-install").onclick = async () => {
+  const hint = $("#app-hint"); hint.textContent = "";
+  if (isStandalone()) { hint.textContent = "You're already using the installed app ✔"; return; }
+  if (deferredInstall) {
+    try {
+      deferredInstall.prompt();
+      const choice = await deferredInstall.userChoice;
+      if (choice && choice.outcome === "accepted") { deferredInstall = null; return; }
+      hint.textContent = "No problem — you can install any time from this menu.";
+    } catch (e) { deferredInstall = null; }
+    return;
+  }
+  const tips = {
+    ios: "On iPhone/iPad: open this site in Safari, tap the Share button, then “Add to Home Screen”.",
+    android: "In Chrome: tap the ⋮ menu (top-right), then “Install app” / “Add to Home screen”.",
+    mac: "In Chrome: click the install icon in the address bar. In Safari: File → Add to Dock.",
+    linux: "In Chrome/Chromium: click the install icon at the right end of the address bar.",
+    windows: "In Chrome or Edge: click the install icon at the right end of the address bar.",
+  };
+  hint.textContent = tips[appPlatform()];
+};
+if (isStandalone()) { const b = $("#getapp-btn"); if (b) b.style.display = "none"; }
 
 async function submitAuth() {
   const username = $("#auth-user").value.trim(), password = $("#auth-pass").value;

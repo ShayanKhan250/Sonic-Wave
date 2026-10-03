@@ -130,6 +130,49 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 def website():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
+
+# ---- PWA: installable-app assets (served from the root scope) ----
+
+@app.get("/manifest.json", include_in_schema=False)
+def pwa_manifest():
+    return FileResponse(os.path.join(STATIC_DIR, "manifest.json"), media_type="application/manifest+json")
+
+
+@app.get("/sw.js", include_in_schema=False)
+def pwa_sw():
+    return FileResponse(os.path.join(STATIC_DIR, "sw.js"), media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/icon-96.png", include_in_schema=False)
+def pwa_icon_96():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-96.png"), media_type="image/png")
+
+
+@app.get("/icon-192.png", include_in_schema=False)
+def pwa_icon_192():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-192.png"), media_type="image/png")
+
+
+@app.get("/icon-512.png", include_in_schema=False)
+def pwa_icon_512():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-512.png"), media_type="image/png")
+
+
+@app.get("/icon-maskable-512.png", include_in_schema=False)
+def pwa_icon_mask():
+    return FileResponse(os.path.join(STATIC_DIR, "icon-maskable-512.png"), media_type="image/png")
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+def pwa_icon_apple():
+    return FileResponse(os.path.join(STATIC_DIR, "apple-touch-icon.png"), media_type="image/png")
+
+
+@app.get("/logo.png", include_in_schema=False)
+def pwa_logo():
+    return FileResponse(os.path.join(STATIC_DIR, "logo-master.png"), media_type="image/png")
+
 @app.get("/legacy", response_class=HTMLResponse, include_in_schema=False)
 def legacy_website():
     return FileResponse(os.path.join(STATIC_DIR, "legacy.html"))
