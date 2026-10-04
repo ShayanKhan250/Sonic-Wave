@@ -183,9 +183,25 @@ _DL_DIR = os.path.join(STATIC_DIR, "downloads")
 WINDOWS_EXE_URL = "https://github.com/ShayanKhan250/Sonic-Wave/releases/latest/download/SonicWave-Setup.exe"
 
 
+_win_dl_cache = {"at": 0.0, "ok": False}
+
+
 @app.get("/download/windows", include_in_schema=False)
 def download_windows():
-    return RedirectResponse(WINDOWS_EXE_URL, status_code=302)
+    # If the GitHub Release asset exists, send users straight to the real
+    # installer; otherwise fall back to the repo page (never a bare 404).
+    import time as _t
+    if _t.time() - _win_dl_cache["at"] > 600:
+        try:
+            with httpx.Client(follow_redirects=True, timeout=6) as c:
+                r = c.head(WINDOWS_EXE_URL)
+            _win_dl_cache["ok"] = r.status_code == 200
+        except Exception:
+            _win_dl_cache["ok"] = False
+        _win_dl_cache["at"] = _t.time()
+    if _win_dl_cache["ok"]:
+        return RedirectResponse(WINDOWS_EXE_URL, status_code=302)
+    return RedirectResponse("https://github.com/ShayanKhan250/Sonic-Wave#-download", status_code=302)
 
 
 @app.get("/download/android", include_in_schema=False)

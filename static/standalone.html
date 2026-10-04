@@ -439,6 +439,78 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
   #pb-right{min-width:120px}
   #vol{display:none}
 }
+/* ============ RIGHT NOW-PLAYING PANEL (Spotify's third column) ============ */
+#npanel{position:fixed;top:0;right:-340px;bottom:var(--player);width:320px;z-index:45;background:var(--side);border-left:1px solid var(--border);padding:18px;overflow-y:auto;transition:right .3s cubic-bezier(.3,1,.4,1);scrollbar-width:thin}
+body.np-open #npanel{right:0}
+body.np-open #main{margin-right:320px}
+.np-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+.np-head button{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer}
+.np-head button:hover{color:var(--text)}
+.np-art{width:100%;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--card);margin-bottom:14px;box-shadow:0 14px 40px rgba(0,0,0,.4)}
+.np-art img{width:100%;height:100%;object-fit:cover;display:block}
+.np-title{font-size:19px;font-weight:800;letter-spacing:-.4px;line-height:1.25}
+.np-artist{font-size:13.5px;color:var(--muted);margin:3px 0 13px}
+.np-actions{display:flex;gap:8px;margin-bottom:18px}
+.np-next-h{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.np-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:9px;cursor:pointer}
+.np-row:hover{background:var(--card-h)}
+.np-row img{width:38px;height:38px;border-radius:7px;object-fit:cover}
+.np-row .nt{flex:1;min-width:0}
+.np-row .nt b{display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-row .nt span{font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+@media (max-width:1150px){body.np-open #npanel{display:none}body.np-open #main{margin-right:0}}
+/* ============ TRUE MOBILE LAYOUT (phones) — Spotify-style ============ */
+#appbanner{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;gap:10px;padding:9px 12px;background:linear-gradient(135deg,#1b1230,#2a1140);border-bottom:1px solid rgba(168,85,247,.35);color:#fff}
+#appbanner img{width:34px;height:34px;border-radius:8px}
+#appbanner div{flex:1;min-width:0;display:flex;flex-direction:column}
+#appbanner b{font-size:13px}
+#appbanner span{font-size:11px;color:#b9a8d8}
+#appbanner #ab-get{background:linear-gradient(135deg,#fa2d48,#a855f7);color:#fff;border:none;border-radius:99px;padding:7px 18px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
+#appbanner #ab-x{background:none;border:none;color:#8d7fa8;font-size:15px;cursor:pointer;padding:4px 6px}
+body.has-appbanner #app{padding-top:52px}
+@media (max-width:640px){
+  /* sidebar -> bottom tab bar */
+  :root{--sidebar:0px}
+  #sidebar{position:fixed;left:0;right:0;bottom:0;top:auto;width:100%;height:56px;flex-direction:row;z-index:70;border-right:none;border-top:1px solid var(--border);background:var(--side);padding:0}
+  .side-top{flex-direction:row !important;align-items:center;justify-content:space-around;padding:0 !important;width:100%;gap:0}
+  .logo,.shead,.side-scroll,#side-user-wrap{display:none !important}
+  .nav-btn{flex-direction:column;gap:3px;padding:6px 16px;margin:0;border-radius:10px}
+  .nav-btn .lbl{display:block !important;font-size:9.5px;letter-spacing:.02em}
+  .nav-btn .ic svg{width:21px;height:21px}
+  #main{margin-left:0;padding-bottom:132px}
+  #topbar{padding:10px 12px;position:sticky;top:0;z-index:40;background:var(--bg)}
+  .navarrow{display:none}
+  #view{padding:0 14px}
+  /* mini player above the tab bar — tap it to open the full-screen player */
+  #playerbar{position:fixed;left:6px;right:6px;bottom:62px;height:58px;border-radius:12px;padding:0 10px;z-index:69;box-shadow:0 10px 30px rgba(0,0,0,.5);border:1px solid var(--border)}
+  #pb-left{flex:1;min-width:0}
+  #pb-art{width:40px;height:40px;border-radius:8px}
+  #pb-mid{position:static;flex:0}
+  #pb-ctrl{gap:2px}
+  #pb-shuffle,#pb-prev,#pb-repeat{display:none}
+  #pb-prog{position:absolute;left:10px;right:10px;bottom:0;height:2px}
+  #pb-prog .tm{display:none}
+  #pb-prog .seekbar{height:2px}
+  #pb-right{min-width:0}
+  #pb-queue,#pb-lyr,#pb-fs,.volic,#vol{display:none}
+  #pb-quality,.atmos-badge{display:none !important}
+  #pb-addpl{display:none}
+  /* content scaling */
+  .dhead h1{font-size:24px}
+  .hero,.heroes{border-radius:14px}
+  .rp-grid{grid-template-columns:1fr 1fr}
+  .cats{grid-template-columns:1fr 1fr}
+  .scard{flex:0 0 128px}
+  h2.sect,.sect{font-size:18px}
+  .seg button{padding:7px 10px;font-size:12px}
+  .modal{width:calc(100vw - 28px);max-height:86vh;overflow-y:auto;padding:22px 18px}
+  .getapp-pill{display:none}
+  #gate .gate-card h1{font-size:30px}
+  .gate-btns{flex-direction:column}
+  .gate-btns .btn{width:100%}
+  #appbanner{top:auto;bottom:124px;border-radius:12px;left:6px;right:6px;border:1px solid rgba(168,85,247,.35)}
+  body.has-appbanner #app{padding-top:0}
+}
 </style>
 </head>
 <body>
@@ -501,6 +573,8 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     </div>
     <div id="pb-right">
       <span class="badge" id="preview-tag" style="display:none"></span>
+      <button class="pcbtn" id="pb-share" title="Share this song" data-ic="share"></button>
+      <button class="pcbtn" id="pb-np" title="Now playing view" data-ic="panel"></button>
       <button class="pcbtn" id="pb-queue" title="Queue" data-ic="queue"></button>
       <button class="pcbtn" id="pb-lyr" title="Lyrics" data-ic="quote"></button>
       <button class="pcbtn" id="pb-fs" title="Full screen" data-ic="expand"></button>
@@ -509,6 +583,19 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     </div>
   </div>
 </div>
+
+<aside id="npanel">
+  <div class="np-head"><span>Now Playing</span><button id="np-close">✕</button></div>
+  <div class="np-art"><img id="np-img" alt=""/></div>
+  <div class="np-title" id="np-title"></div>
+  <div class="np-artist" id="np-artist"></div>
+  <div class="np-actions">
+    <button class="btn btn-ghost btn-sm" id="np-share">Share</button>
+    <button class="btn btn-ghost btn-sm" id="np-like">♥ Like</button>
+  </div>
+  <div class="np-next-h">Next in queue</div>
+  <div id="np-next"></div>
+</aside>
 
 <div id="fs">
   <div class="fs-bg" id="fs-bg"></div>
@@ -654,20 +741,16 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
     <h2>Get SonicWave</h2>
     <div class="msub">Listen online — or install it as a real app on any device. Free, no store needed.</div>
     <img src="/icon-192.png" alt="" style="width:64px;height:64px;border-radius:15px;display:block;margin:2px auto 12px;box-shadow:0 8px 24px rgba(124,58,237,.35)" onerror="this.style.display='none'"/>
-    <button class="btn btn-grad mwide" id="app-install">⬇ Install on this device</button>
-    <div class="err" id="app-hint" style="color:var(--muted);text-align:center"></div>
-    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">DOWNLOAD SETUP FILE</div>
+    <div style="margin:2px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">CHOOSE YOUR SYSTEM</div>
     <div class="dl-grid" style="grid-template-columns:repeat(2,1fr)">
       <a class="dl-card" id="dl-win" href="https://github.com/ShayanKhan250/Sonic-Wave/releases/latest/download/SonicWave-Setup.exe">🪟<b>Windows 10 / 11</b><span>Native app · .exe setup</span></a>
       <a class="dl-card" id="dl-and" href="https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave.apk" download>🤖<b>Android</b><span>Native app · .apk</span></a>
       <a class="dl-card" id="dl-mac" href="https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-macOS.zip" download>🍎<b>macOS</b><span>.app bundle</span></a>
       <a class="dl-card" id="dl-lin" href="https://github.com/ShayanKhan250/Sonic-Wave/raw/main/static/downloads/SonicWave-Linux-Installer.sh" download>🐧<b>Linux</b><span>installer</span></a>
+      <button class="dl-card" id="dl-ios" style="cursor:pointer;background:transparent;font-family:inherit">📱<b>iPhone / iPad</b><span>Add to Home Screen</span></button>
     </div>
+    <div class="err" id="app-hint" style="color:var(--muted);text-align:left"></div>
     <div style="font-size:11px;color:var(--dim);margin:7px 0 0;line-height:1.5">Windows: if SmartScreen appears, click <b style="color:var(--muted)">More info → Run anyway</b>. Android: allow "Install unknown apps" when asked. Mac: right-click the app → Open.</div>
-    <div style="margin:13px 0 9px;font-size:10.5px;letter-spacing:.12em;color:var(--dim);font-weight:700">ON iPHONE / iPAD</div>
-    <div class="app-rows">
-      <div class="app-row"><span class="app-os">📱 iPhone / iPad</span><span class="app-how">Safari → Share <b>⎙</b> → <b>Add to Home Screen</b> (Apple doesn't allow sideloaded apps)</span></div>
-    </div>
     <div style="margin:14px 0 0;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap">
       <a class="btn btn-ghost btn-sm" href="https://github.com/ShayanKhan250/Sonic-Wave" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>View on GitHub</a>
       <a class="btn btn-ghost btn-sm" href="https://github.com/ShayanKhan250/Sonic-Wave?tab=readme-ov-file" target="_blank" rel="noopener" style="text-decoration:none">Desktop downloads ↗</a>
@@ -1269,9 +1352,15 @@ async function localApi(path, opts={}){
 /* ---------------- end local backend ---------------- */
 
 
+if (typeof CSS === "undefined" || !CSS.escape) {           // old-browser safety
+  window.CSS = window.CSS || {};
+  window.CSS.escape = window.CSS.escape || function (s) { return String(s).replace(/[^a-zA-Z0-9_\u00A0-\uFFFF-]/g, c => "\\" + c); };
+}
 /* ================= ICONS ================= */
 const I = (p, fill=false) => `<svg viewBox="0 0 24 24" fill="${fill?"currentColor":"none"}" stroke="${fill?"none":"currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const ICONS = {
+  share:  I('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2M8.6 13.4l6.8 4.2"/>'),
+  panel:  I('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/>'),
   note:   I('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
   home:   I('<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/>'),
@@ -1616,45 +1705,8 @@ $("#prof-delgo").onclick = async () => {
    installability, we WAIT for the event (up to 3s) instead of giving up. */
 const isStandalone = () =>
   (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
-window.__swBipCb = () => {       // event arrived (possibly while the modal is open)
-  const h = $("#app-hint");
-  if (h && $("#app-overlay").classList.contains("open") && !isStandalone())
-    h.textContent = "Ready to install — click the button above ⬆";
-};
-window.addEventListener("appinstalled", () => {
-  window.__swBip = null;
-  const b = $("#getapp-btn"); if (b) b.style.display = "none";
-  const g = $("#gate-install"); if (g) g.style.display = "none";
-  $("#app-overlay").classList.remove("open");
-  toast("SonicWave installed! Find it on your home screen 🎉");
-});
-function waitForInstallEvent(ms) {
-  return new Promise((res) => {
-    if (window.__swBip) return res(window.__swBip);
-    const prev = window.__swBipCb;
-    const t = setTimeout(() => { window.__swBipCb = prev; res(null); }, ms);
-    window.__swBipCb = (e) => { clearTimeout(t); window.__swBipCb = prev; if (prev) { try { prev(e); } catch (x) {} } res(e); };
-  });
-}
-function appPlatform() {
-  const ua = navigator.userAgent || "";
-  if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
-  if (/Android/i.test(ua)) return "android";
-  if (/Mac/i.test(ua)) return "mac";
-  if (/Linux/i.test(ua)) return "linux";
-  return "windows";
-}
-const INSTALL_TIPS = {
-  ios: "On iPhone/iPad: open this site in Safari, tap the Share button ⎙, then “Add to Home Screen”.",
-  android: "In Chrome: tap the ⋮ menu (top-right), then “Install app” / “Add to Home screen”.",
-  mac: "In Chrome: click the install icon in the address bar. In Safari: File → Add to Dock.",
-  linux: "In Chrome/Chromium: click the install icon at the right end of the address bar.",
-  windows: "In Chrome or Edge: click the install icon at the right end of the address bar.",
-};
 function openGetApp() {
   $("#app-hint").textContent = "";
-  if (isStandalone()) $("#app-hint").textContent = "You're already using the installed app ✔";
-  else if (window.__swBip) $("#app-hint").textContent = "Ready to install — click the button above ⬆";
   $("#app-overlay").classList.add("open");
 }
 $("#getapp-btn").onclick = openGetApp;
@@ -1663,44 +1715,23 @@ const _gateInstall = $("#gate-install");
 if (_gateInstall) _gateInstall.onclick = openGetApp;
 $("#app-close").onclick = () => $("#app-overlay").classList.remove("open");
 $("#app-overlay").addEventListener("click", e => { if (e.target.id === "app-overlay") $("#app-overlay").classList.remove("open"); });
-let _installBusy = false;
-$("#app-install").onclick = async () => {
-  if (_installBusy) return;
-  const hint = $("#app-hint");
-  if (isStandalone()) { hint.textContent = "You're already using the installed app ✔"; return; }
-  _installBusy = true;
-  const btn = $("#app-install"), orig = btn.textContent;
-  try {
-    let ev = window.__swBip;
-    if (!ev) {                                   // criteria may still be evaluating — wait for it
-      hint.textContent = "Preparing install…";
-      btn.textContent = "⏳ Preparing…";
-      ev = await waitForInstallEvent(3000);
-      btn.textContent = orig;
-    }
-    if (ev) {
-      try {
-        window.__swBip = null;                   // a prompt event is single-use
-        ev.prompt();
-        const choice = await ev.userChoice;
-        if (choice && choice.outcome === "accepted") { hint.textContent = "Installing… check your home screen / desktop 🎉"; return; }
-        hint.textContent = "No problem — you can install any time from this menu.";
-      } catch (e) {
-        hint.textContent = INSTALL_TIPS[appPlatform()];
-      }
-      return;
-    }
-    // Browser never offered auto-install (iOS Safari, Firefox, or already installed):
-    hint.textContent = INSTALL_TIPS[appPlatform()];
-  } finally {
-    _installBusy = false;
-    btn.textContent = orig;
-  }
+$("#dl-ios").onclick = () => {
+  $("#app-hint").textContent = "On iPhone/iPad: open this site in Safari, tap the Share button ⎙, then “Add to Home Screen”. SonicWave appears as an app on your home screen (Apple doesn't allow sideloaded apps).";
 };
-if (isStandalone()) {
-  const b = $("#getapp-btn"); if (b) b.style.display = "none";
-  const g = $("#gate-install"); if (g) g.style.display = "none";
-}
+/* Mobile visitors: suggest the native app once (dismissible). */
+(function mobileAppBanner() {
+  try {
+    if (isStandalone()) return;
+    if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+    if (localStorage.getItem("sw_appbanner") === "no") return;
+    const bar = document.createElement("div");
+    bar.id = "appbanner";
+    bar.innerHTML = `<img src="/icon-96.png" alt="" onerror="this.style.display='none'"/><div><b>Get the SonicWave app</b><span>Smoother, faster, full-screen — free</span></div><button id="ab-get">Get</button><button id="ab-x">✕</button>`;
+    document.body.appendChild(bar);
+    bar.querySelector("#ab-get").onclick = () => { bar.remove(); openGetApp(); };
+    bar.querySelector("#ab-x").onclick = () => { bar.remove(); try { localStorage.setItem("sw_appbanner", "no"); } catch (e) {} };
+  } catch (e) {}
+})();
 
 async function submitAuth() {
   const username = $("#auth-user").value.trim(), password = $("#auth-pass").value;
@@ -2045,13 +2076,49 @@ function togglePlay() {
     audio.play().catch(()=>{});
   } else audio.pause();
 }
+/* Smart shuffle — like Spotify: blends the current queue with YOUR taste
+   (Made-for-You recommendations + Liked Songs), dedup'd, never repeating
+   the last few plays. */
+let _shufHist = [];
+function shufflePool() {
+  const seen = new Set(), pool = [];
+  const add = (t) => {
+    if (!t || !t.id) return;
+    const k = String(t.id);
+    if (seen.has(k)) return;
+    seen.add(k); pool.push(t);
+  };
+  (S.ctx || []).forEach(add);
+  try {
+    const r = S.recs && S.recs.data;
+    if (r) {
+      (r.mix || []).forEach(add);
+      (r.sections || []).forEach(s => (s.tracks || []).forEach(add));
+    }
+  } catch (e) {}
+  try { S.liked.forEach(v => add(v)); } catch (e) {}
+  return pool;
+}
 function nextTrack() {
+  if (S.shuffle) {
+    const pool = shufflePool();
+    if (pool.length > 1) {
+      const curId = S.current ? String(S.current.id) : "";
+      const recent = new Set(_shufHist.slice(-Math.min(8, pool.length - 1)));
+      recent.add(curId);
+      let cand = pool.filter(t => !recent.has(String(t.id)));
+      if (!cand.length) { _shufHist = []; cand = pool.filter(t => String(t.id) !== curId); }
+      const pick = cand[Math.floor(Math.random() * cand.length)];
+      _shufHist.push(String(pick.id));
+      if (_shufHist.length > 30) _shufHist.shift();
+      const inCtx = S.ctx.findIndex(t => String(t.id) === String(pick.id));
+      if (inCtx >= 0) S.idx = inCtx; else { S.ctx.push(pick); S.idx = S.ctx.length - 1; }
+      playTrack(pick);
+      return;
+    }
+  }
   if (!S.ctx.length) return;
-  if (S.shuffle && S.ctx.length > 1) {
-    let n;
-    do { n = Math.floor(Math.random() * S.ctx.length); } while (n === S.idx);
-    S.idx = n;
-  } else S.idx = (S.idx + 1) % S.ctx.length;
+  S.idx = (S.idx + 1) % S.ctx.length;
   playTrack(S.ctx[S.idx]);
 }
 function prevTrack() {
@@ -2114,12 +2181,68 @@ function seekTo(e, el) {
 }
 $("#seek").addEventListener("click", e => seekTo(e, e.currentTarget));
 $("#fs-seek").addEventListener("click", e => seekTo(e, e.currentTarget));
-$("#vol").addEventListener("click", (e) => {
-  const r = e.currentTarget.getBoundingClientRect();
-  audio.volume = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-  $("#vol-fill").style.width = (audio.volume * 100) + "%";
-  if (consentOK()) { try { localStorage.setItem("sw_vol", String(audio.volume)); } catch (err) {} }
-});
+/* ---- buttery volume: drag anywhere on the bar, plus scroll-wheel ---- */
+(function smoothVolume() {
+  const bar = $("#vol"); if (!bar) return;
+  let dragging = false;
+  const setVol = (clientX) => {
+    const r = bar.getBoundingClientRect();
+    const v = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+    if (!isFinite(v)) return;
+    audio.volume = v;
+    $("#vol-fill").style.width = (v * 100) + "%";
+  };
+  const save = () => { if (consentOK()) { try { localStorage.setItem("sw_vol", String(audio.volume)); } catch (e) {} } };
+  bar.addEventListener("pointerdown", (e) => {
+    dragging = true; bar.setPointerCapture(e.pointerId); setVol(e.clientX); e.preventDefault();
+  });
+  bar.addEventListener("pointermove", (e) => { if (dragging) setVol(e.clientX); });
+  const stop = () => { if (dragging) { dragging = false; save(); } };
+  bar.addEventListener("pointerup", stop);
+  bar.addEventListener("pointercancel", stop);
+  bar.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    audio.volume = Math.min(1, Math.max(0, audio.volume + (e.deltaY < 0 ? 0.05 : -0.05)));
+    $("#vol-fill").style.width = (audio.volume * 100) + "%"; save();
+  }, { passive: false });
+})();
+
+/* ---- share a song (Web Share API like Spotify, clipboard fallback) ---- */
+async function shareTrack(t) {
+  t = t || S.current;
+  if (!t) { toast("Play a song first"); return; }
+  const base = (location.origin && location.origin !== "null") ? location.origin : "https://sonicwave-gamma.vercel.app";
+  const url = `${base}/?song=${encodeURIComponent(t.id)}&t=${encodeURIComponent(t.title || "")}&a=${encodeURIComponent((t.artist || "").split(",")[0])}`;
+  const text = `🎵 ${t.title} — ${t.artist || ""} · listen on SonicWave`;
+  if (navigator.share) {
+    try { await navigator.share({ title: "SonicWave", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(`${text}\n${url}`); toast("Link copied — send it to a friend 🔗"); }
+  catch (e) { toast(url); }
+}
+$("#pb-share").onclick = () => shareTrack();
+
+/* ---- right Now-Playing panel (Spotify's third column) ---- */
+function updateNPanel() {
+  const t = S.current;
+  if (!t) { document.body.classList.remove("np-open"); return; }
+  $("#np-img").src = t.img || "";
+  $("#np-title").textContent = t.title || "";
+  $("#np-artist").textContent = t.artist || "";
+  const upNext = (S.ctx || []).slice(S.idx + 1, S.idx + 7);
+  $("#np-next").innerHTML = upNext.length
+    ? upNext.map((u, i) => `<div class="np-row" data-i="${S.idx + 1 + i}"><img src="${esc(u.img || "")}" loading="lazy" alt=""/><div class="nt"><b>${esc(u.title)}</b><span>${esc(u.artist || "")}</span></div></div>`).join("")
+    : `<div style="font-size:12px;color:var(--dim)">Queue is empty — shuffle will pick from your taste.</div>`;
+  $$("#np-next .np-row").forEach(r => r.onclick = () => { S.idx = +r.dataset.i; playTrack(S.ctx[S.idx]); });
+}
+$("#pb-np").onclick = () => {
+  if (!S.current) { toast("Play a song first"); return; }
+  document.body.classList.toggle("np-open");
+  if (document.body.classList.contains("np-open")) updateNPanel();
+};
+$("#np-close").onclick = () => document.body.classList.remove("np-open");
+$("#np-share").onclick = () => shareTrack();
+$("#np-like").onclick = () => { if (S.current) toggleLike(S.current); };
 // restore saved volume (optional-storage preference)
 try {
   const sv = parseFloat(localStorage.getItem("sw_vol"));
@@ -2251,6 +2374,7 @@ $("#set-country").onchange = () => {
 function updatePlayerUI() {
   const t = S.current;
   if (!t) setStreamMeta(null);
+  try { if (document.body.classList.contains("np-open")) updateNPanel(); } catch (e) {}
   $("#pb-title").textContent = t ? t.title : "Nothing playing";
   $("#pb-artist").textContent = t ? (t.artist || "") : "Pick a song to start";
   $("#pb-play").innerHTML = S.playing ? ICONS.pause : ICONS.play;
@@ -2342,21 +2466,28 @@ async function toggleLike(track) {
   if (!S.user) { openAuth("login"); return; }
   const id = String(track.id);
   const liked = S.liked.has(id);
+  // OPTIMISTIC: update the UI instantly, sync with the server in the background.
+  if (liked) S.liked.delete(id); else S.liked.set(id, { ...track });
+  $$(`[data-likeid="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle("liked", !liked));
+  updatePlayerUI();
+  toast(liked ? "Removed from Liked Songs" : "Added to Liked Songs ❤");
+  if (S.view === "liked") render();
   try {
     if (liked) {
       await api(`/api/me/likes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      S.liked.delete(id);
     } else {
       await api("/api/me/likes", { method: "POST", body: {
         id, title: track.title, artist: track.artist || null, album: track.album || null,
         img: track.img || null, url: track.preview_url || null, duration: track.duration || null } });
-      S.liked.set(id, { ...track });
     }
-    $$(`[data-likeid="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle("liked", !liked));
+  } catch (e) {
+    // server refused — roll the UI back
+    if (liked) S.liked.set(id, { ...track }); else S.liked.delete(id);
+    $$(`[data-likeid="${CSS.escape(id)}"]`).forEach(b => b.classList.toggle("liked", liked));
     updatePlayerUI();
-    toast(liked ? "Removed from Liked Songs" : "Added to Liked Songs ❤");
     if (S.view === "liked") render();
-  } catch (e) { toast(e.message); }
+    toast("Couldn't sync that — check your connection");
+  }
 }
 
 /* ================= ADD-TO-PLAYLIST POPOVER ================= */
@@ -2380,13 +2511,13 @@ function openPop(anchor, track) {
   let x = Math.min(window.innerWidth - pw - 10, Math.max(10, r.left - pw + r.width));
   let y = r.top - ph - 8; if (y < 10) y = Math.min(window.innerHeight - ph - 10, r.bottom + 8);
   popEl.style.left = x + "px"; popEl.style.top = y + "px";
-  $$(".pop-it", popEl).forEach(b => b.onclick = async () => {
-    try {
-      await api(`/api/me/playlists/${b.dataset.pl}/tracks`, { method: "POST", body: trackBody(track) });
-      const pl = S.myPls.find(p => String(p.id) === b.dataset.pl);
-      toast(`Added to ${pl ? pl.name : "playlist"}`);
-      refreshPls();
-    } catch (e) { toast(e.message); }
+  $$(".pop-it", popEl).forEach(b => b.onclick = () => {
+    const pl = S.myPls.find(p => String(p.id) === b.dataset.pl);
+    toast(`Added to ${pl ? pl.name : "playlist"}`);           // instant feedback
+    if (pl) pl.count = (pl.count || 0) + 1;
+    api(`/api/me/playlists/${b.dataset.pl}/tracks`, { method: "POST", body: trackBody(track) })
+      .then(() => refreshPls())
+      .catch(e => toast(e.message));
     closePop();
   });
   const make = async () => {
@@ -2534,7 +2665,7 @@ async function loadHomeRecs() {
     <div class="sec">
       <div class="sec-head">
         <h2>${ICONS.spark.replace('viewBox','style="width:19px;height:19px;display:inline-block;vertical-align:-3px;color:var(--acc)" viewBox')}&nbsp;Made For You</h2>
-        <button class="btn btn-ghost btn-sm" id="mfy-play">${ICONS.play}&nbsp;Play My Mix</button>
+        <div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" id="mfy-play">${ICONS.play}&nbsp;Play My Mix</button><button class="btn btn-ghost btn-sm" id="mfy-ai" title="Create a playlist from many artists matched to your genres, style and mood">✨ AI Playlist</button></div>
       </div>
       <div class="sub1" style="margin-bottom:12px">${d.personalized ? "A fresh mix from all the artists and styles you listen to." : "Play and like songs — this becomes your personal mix."}</div>
       <div class="shelf" id="mfy-shelf">
@@ -2566,6 +2697,39 @@ async function loadHomeRecs() {
     if (c) playTrack(mix[+c.dataset.i], mix, +c.dataset.i);
   });
   $("#mfy-play").onclick = () => { playTrack(mix[0], mix, 0); toast("Playing your personal mix ✨"); };
+  /* AI Playlist: a real saved playlist blended from MANY creators, chosen
+     from your genres / style / mood (recommendation engine output). */
+  $("#mfy-ai").onclick = async () => {
+    const btn = $("#mfy-ai"); if (!btn || btn.disabled) return;
+    btn.disabled = true; btn.textContent = "✨ Creating…";
+    try {
+      const seen = new Set(), blend = [];
+      const addT = (t) => { if (t && t.id && !seen.has(String(t.id))) { seen.add(String(t.id)); blend.push(t); } };
+      (d.mix || []).forEach(addT);
+      (d.sections || []).forEach(s => (s.tracks || []).forEach(addT));
+      // interleave so no single creator dominates (Spotify-style spread)
+      blend.sort(() => Math.random() - 0.5);
+      const byArtist = {};
+      blend.forEach(t => { const a = (t.artist || "?").split(",")[0]; (byArtist[a] = byArtist[a] || []).push(t); });
+      const lanes = Object.values(byArtist), finalT = [];
+      for (let i = 0; finalT.length < Math.min(30, blend.length); i++) {
+        let got = false;
+        for (const lane of lanes) { if (lane[i]) { finalT.push(lane[i]); got = true; if (finalT.length >= 30) break; } }
+        if (!got) break;
+      }
+      if (finalT.length < 4) { toast("Listen to a few more songs first — the AI needs taste data"); return; }
+      const name = "AI Mix · " + new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const pl = await api("/api/me/playlists", { method: "POST", body: { name } });
+      const pid = pl.id || (pl.playlist && pl.playlist.id);
+      for (const t of finalT) {
+        try { await api(`/api/me/playlists/${pid}/tracks`, { method: "POST", body: trackBody(t) }); } catch (e) {}
+      }
+      refreshPls();
+      toast(`"${name}" created — ${finalT.length} songs from ${Object.keys(byArtist).length} artists 🎉`);
+      playTrack(finalT[0], finalT, 0);
+    } catch (e) { toast(e.message || "Couldn't create the AI playlist"); }
+    finally { btn.disabled = false; btn.textContent = "✨ AI Playlist"; }
+  };
   secs.forEach((s, si) => {
     const shelf = host.querySelector(`[data-rsec="${si}"]`);
     if (shelf) shelf.addEventListener("click", e => {
@@ -2960,6 +3124,20 @@ fillCountrySelect();
   await loadUser();
   updateGate();
   if (S.user) setView("home");
+  /* shared-song deep link: /?song=ID&t=Title&a=Artist — find & play it */
+  try {
+    const q = new URLSearchParams(location.search);
+    if (S.user && q.get("song")) {
+      const title = q.get("t") || "", artist = q.get("a") || "";
+      history.replaceState(null, "", location.pathname);
+      toast("Opening shared song…");
+      const d = await api(`/api/music/search?q=${encodeURIComponent((title + " " + artist).trim())}&engine=auto`);
+      const list = (d.tracks || d.results || []);
+      const hit = list.find(t => String(t.id) === q.get("song")) || list[0];
+      if (hit) playTrack(hit, list, Math.max(0, list.indexOf(hit)));
+      else toast("Couldn't find that song anymore");
+    }
+  } catch (e) {}
 })();
 </script>
 </body>
