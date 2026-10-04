@@ -31,21 +31,41 @@ if ("serviceWorker" in navigator) {
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 :root{
-  --bg:#0a0a0e; --panel:rgba(22,22,28,.72); --solid:#16161c; --card:#1b1b23; --card-h:#26262f;
-  --border:rgba(255,255,255,.09); --text:#fff; --muted:#a4a4b4; --dim:#6e6e80;
+  --bg:#090a12; --panel:rgba(22,23,33,.72); --solid:#13141d; --card:#1a1c28; --card-h:#262940;
+  --border:rgba(255,255,255,.1); --text:#fff; --muted:#aab; --dim:#747792;
   --acc:#fa4d5e; --acc2:#c23cf5; --grad:linear-gradient(135deg,#fa2d48,#c23cf5);
-  --glass:rgba(18,18,24,.6); --inputbg:rgba(255,255,255,.08); --seek:rgba(255,255,255,.18);
-  --rowh:rgba(255,255,255,.06); --player:86px; --sidebar:236px;
+  --glass:rgba(16,17,26,.6); --inputbg:rgba(255,255,255,.09); --seek:rgba(255,255,255,.18);
+  --rowh:rgba(255,255,255,.07); --player:86px; --sidebar:236px;
+  --bodyglow:radial-gradient(1100px 700px at 88% -12%,rgba(124,45,220,.17),transparent 55%),radial-gradient(900px 650px at -8% 112%,rgba(250,45,72,.12),transparent 55%);
 }
 html[data-theme="light"]{
-  --bg:#f3f3f6; --panel:rgba(255,255,255,.78); --solid:#ffffff; --card:#ffffff; --card-h:#ebebf0;
-  --border:rgba(0,0,0,.09); --text:#121216; --muted:#5b5b6e; --dim:#9292a2;
-  --glass:rgba(255,255,255,.65); --inputbg:rgba(0,0,0,.06); --seek:rgba(0,0,0,.16);
-  --rowh:rgba(0,0,0,.05);
+  --bg:#f6f6fb; --panel:rgba(255,255,255,.82); --solid:#ffffff; --card:#ffffff; --card-h:#ececf4;
+  --border:rgba(20,20,60,.1); --text:#13131a; --muted:#565670; --dim:#9191a6;
+  --glass:rgba(255,255,255,.7); --inputbg:rgba(20,20,60,.06); --seek:rgba(20,20,60,.18);
+  --rowh:rgba(20,20,60,.055);
+  --bodyglow:radial-gradient(1100px 700px at 88% -12%,rgba(168,85,247,.1),transparent 55%),radial-gradient(900px 650px at -8% 112%,rgba(250,45,72,.07),transparent 55%);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
-body{font-family:'Figtree','Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:'Figtree','Plus Jakarta Sans',system-ui,sans-serif;background:var(--bodyglow),var(--bg);background-attachment:fixed;color:var(--text);overflow:hidden;font-size:14px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+/* richer surfaces: subtle depth on cards & rows, glow on primary actions */
+.scard .art,.tp,.rp-grid>*,.cats>*{box-shadow:0 6px 22px rgba(0,0,0,.18)}
+html[data-theme="light"] .scard .art,html[data-theme="light"] .tp{box-shadow:0 6px 20px rgba(30,30,80,.1)}
+.btn-grad{box-shadow:0 8px 26px rgba(194,60,245,.3)}
+.btn-grad:hover{box-shadow:0 10px 32px rgba(194,60,245,.45)}
+/* touch devices: play buttons must always be visible (no hover there) */
+@media (hover:none){
+  .tp .pbtn,.scard .pbtn{opacity:1 !important;transform:none !important}
+}
+.mob-only{display:none !important}
+.lib-card{display:flex;align-items:center;gap:13px;padding:11px;border-radius:13px;background:var(--card);border:1px solid var(--border);cursor:pointer;transition:background .15s,transform .15s}
+.lib-card:hover{background:var(--card-h);transform:translateY(-1px)}
+.lib-card .lp{width:52px;height:52px;border-radius:10px;overflow:hidden;background:var(--card-h);display:grid;place-items:center;color:#fff;flex-shrink:0}
+.lib-card .lp img{width:100%;height:100%;object-fit:cover}
+.lib-card .lp svg{width:20px;height:20px}
+.lib-card .li{min-width:0}
+.lib-card .li b{display:block;font-size:14px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-card .li span{font-size:11.5px;color:var(--dim)}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input{font-family:inherit;outline:none}
 svg{display:block}
@@ -490,6 +510,7 @@ body.has-appbanner #app{padding-top:52px}
   .logo,.shead,.side-scroll,#side-user-wrap{display:none !important}
   .nav-btn{flex-direction:column;gap:3px;padding:6px 16px;margin:0;border-radius:10px}
   .nav-btn .lbl{display:block !important;font-size:9.5px;letter-spacing:.02em}
+  .mob-only{display:flex !important}
   .nav-btn .ic svg{width:21px;height:21px}
   #main{margin-left:0;padding-bottom:132px}
   #topbar{padding:10px 12px;position:sticky;top:0;z-index:40;background:var(--bg)}
@@ -536,6 +557,7 @@ body.has-appbanner #app{padding-top:52px}
       <button class="nav-btn active" data-view="home"><span class="ic" data-ic="home"></span><span class="lbl">Listen Now</span></button>
       <button class="nav-btn" data-view="search"><span class="ic" data-ic="search"></span><span class="lbl">Search</span></button>
       <button class="nav-btn" data-view="liked"><span class="ic" data-ic="heart"></span><span class="lbl">Liked Songs</span></button>
+      <button class="nav-btn mob-only" data-view="library"><span class="ic" data-ic="queue"></span><span class="lbl">Library</span></button>
     </div>
     <div class="shead" style="display:flex;align-items:center;justify-content:space-between;padding-right:14px">
       <span style="padding-left:10px">Playlists</span>
@@ -2107,6 +2129,7 @@ $("#npl-go").onclick = async () => {
     $("#pl-overlay").classList.remove("open"); $("#npl-name").value = "";
     toast(`Playlist "${name}" created`);
     await refreshPls();
+    if (S.view === "library") render();          // instant refresh on the Library tab
   } catch (e) { $("#npl-err").textContent = e.message; }
 };
 
@@ -2192,8 +2215,33 @@ $("#nav-fwd").onclick = () => { if (S.histPos < S.hist.length - 1) { S.histPos++
 $$(".nav-btn[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
 $("#main").addEventListener("scroll", () => $("#topbar").classList.toggle("scrolled", $("#main").scrollTop > 24));
 function render() {
-  ({ home: renderHome, search: renderSearch, liked: renderLiked,
+  ({ home: renderHome, search: renderSearch, liked: renderLiked, library: renderLibrary,
      playlist: renderPlaylist, artist: renderArtist }[S.view] || renderHome)();
+}
+
+/* ====== LIBRARY (your playlists — also the mobile home for them) ====== */
+function renderLibrary() {
+  const pls = S.myPls || [];
+  $("#view").innerHTML = `
+    <div class="sec" style="padding-top:16px">
+      <div class="sec-head"><h2>Your Library</h2>
+        <button class="btn btn-grad btn-sm" id="lib-new">+ New playlist</button></div>
+      <div class="rp-grid" id="lib-grid" style="margin-top:14px">
+        <div class="lib-card" data-go="liked">
+          <div class="lp" style="background:var(--grad)">${ICONS.heart}</div>
+          <div class="li"><b>Liked Songs</b><span>${S.liked.size} songs</span></div>
+        </div>
+        ${pls.map(p => `
+          <div class="lib-card" data-pl="${p.id}">
+            <div class="lp">${p.cover ? `<img src="${esc(p.cover)}" alt=""/>` : (p.covers && p.covers[0] ? `<img src="${esc(p.covers[0])}" alt=""/>` : ICONS.note)}</div>
+            <div class="li"><b>${esc(p.name)}</b><span>${p.count} songs</span></div>
+          </div>`).join("")}
+      </div>
+      ${!pls.length ? `<div style="margin-top:14px;font-size:13px;color:var(--dim)">No playlists yet — tap <b style="color:var(--muted)">+ New playlist</b> to make your first one.</div>` : ""}
+    </div>`;
+  $("#lib-new").onclick = () => S.user ? $("#pl-overlay").classList.add("open") : openAuth("login");
+  $$("#lib-grid .lib-card").forEach(c => c.onclick = () =>
+    c.dataset.go === "liked" ? setView("liked") : setView("playlist", +c.dataset.pl));
 }
 
 /* ====== MADE FOR YOU — blended multi-artist recommendations, shown ON HOME ====== */
