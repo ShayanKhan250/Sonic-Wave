@@ -320,7 +320,7 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 #fs .fs-close svg,#fs .fs-corner svg{width:18px;height:18px}
 #fs .fs-corner.liked{color:var(--acc)}
 #fs .fs-corner.liked svg{fill:currentColor}
-#fs .fs-art{width:min(40vh,350px,82vw);aspect-ratio:1/1;height:auto;flex-shrink:0;border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,.65);position:relative;overflow:hidden;background:#16161c;transition:transform .4s cubic-bezier(.2,1,.4,1)}
+#fs .fs-art{width:min(52vh,460px,82vw);aspect-ratio:1/1;height:auto;flex-shrink:0;border-radius:14px;box-shadow:0 30px 100px rgba(0,0,0,.7);position:relative;overflow:hidden;background:#16161c;transition:transform .4s cubic-bezier(.2,1,.4,1)}
 #fs .fs-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 #fs.paused .fs-art{transform:scale(.97)}
 #fs .fs-meta{display:flex;align-items:center;gap:10px;width:min(40vh,350px,82vw);text-align:left}
@@ -353,7 +353,21 @@ h1.big{font-size:32px;font-weight:900;letter-spacing:-1.1px;margin:10px 0 4px}
 }
 /* lyrics panel (Cider style) */
 #lyr{width:0;overflow:hidden;position:relative;z-index:2;transition:width .35s cubic-bezier(.3,1,.4,1);display:flex;flex-direction:column}
-#fs.lyrics-open #lyr{width:min(420px,42vw)}
+#fs.lyrics-open #lyr{width:min(480px,44vw)}
+/* Spotify-style artist bio card inside the right column */
+#lyr-bio{margin:34px 0 60px}
+.bio-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);border-radius:14px;overflow:hidden}
+.bio-card .bimg{width:100%;height:190px;object-fit:cover;display:block}
+.bio-card .bpad{padding:16px}
+.bio-card h4{margin:0 0 3px;font-size:16px;font-weight:800;color:#fff}
+.bio-card .bfans{font-size:12.5px;color:rgba(255,255,255,.55);margin-bottom:9px}
+.bio-card p{margin:0;font-size:13px;line-height:1.65;color:rgba(255,255,255,.75);display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.bio-card .bmore{background:none;border:none;color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;padding:8px 0 0;font-family:inherit}
+#np-bio .bio-card h4,#np-bio .bio-card p{color:var(--text)}
+#np-bio .bio-card{background:var(--card);border-color:var(--border)}
+#np-bio .bio-card .bfans{color:var(--dim)}
+#np-bio .bio-card .bmore{color:var(--text)}
+.np-bio-h{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:18px 0 9px}
 #lyr .lyr-inner{width:min(460px,46vw);height:100%;padding:90px 40px 46vh;overflow-y:auto;mask-image:linear-gradient(180deg,transparent,#000 80px,#000 calc(100% - 80px),transparent);scrollbar-width:none}
 #lyr .lyr-inner::-webkit-scrollbar{display:none}
 #lyr .ll{font-size:24px;font-weight:700;letter-spacing:-.3px;line-height:1.35;color:rgba(255,255,255,.3);margin-bottom:26px;cursor:pointer;transition:color .3s;transform-origin:left center}
@@ -595,6 +609,7 @@ body.has-appbanner #app{padding-top:52px}
   </div>
   <div class="np-next-h">Next in queue</div>
   <div id="np-next"></div>
+  <div id="np-bio"></div>
 </aside>
 
 <div id="fs">
@@ -625,7 +640,7 @@ body.has-appbanner #app{padding-top:52px}
       <button class="pcbtn sm" id="fs-addpl" title="Add to playlist" data-ic="plus"></button>
     </div>
   </div>
-  <div id="lyr"><div class="lyr-inner" id="lyr-inner"></div></div>
+  <div id="lyr"><div class="lyr-inner" id="lyr-inner"><div id="lyr-lyrics"></div><div id="lyr-bio"></div></div></div>
 </div>
 
 <div id="gate">
@@ -2002,6 +2017,7 @@ async function playTrack(track, ctx = null, idx = -1) {
   if (ctx) { S.ctx = ctx; S.idx = idx; }
   S.current = track; S.playing = true;
   updatePlayerUI(); highlightRows(); setAmbient(track.img || null);
+  setTimeout(() => { try { ensureSmartQueue(); } catch (e) {} }, 300);   // keep the queue taste-filled
   if (track.source === "yt") {
     realArt(track).then(img => {   // swap the video thumbnail for the real album cover
       if (img && S.current === track) { updatePlayerUI(); setAmbient(img); updateMediaSession(track); }
@@ -2099,7 +2115,28 @@ function shufflePool() {
   try { S.liked.forEach(v => add(v)); } catch (e) {}
   return pool;
 }
+/* Smart queue (Spotify Autoplay): when the queue is nearly over, quietly
+   extend it with songs matched to your taste so the music never just stops
+   and "Next in queue" is always smart. */
+let _esqBusy = false;
+function ensureSmartQueue() {
+  if (!S.current || !S.user) return;
+  if ((S.ctx.length - 1 - S.idx) >= 3) return;             // plenty queued already
+  if (!S.recs && !_esqBusy) {                               // taste data not loaded yet → fetch in background
+    _esqBusy = true;
+    api(`/api/me/recommendations?country=${S.country || "us"}`)
+      .then(d => { S.recs = { data: d, at: Date.now() }; _esqBusy = false; ensureSmartQueue(); })
+      .catch(() => { _esqBusy = false; });
+  }
+  const have = new Set((S.ctx || []).map(t => String(t.id)));
+  const picks = shufflePool().filter(t => !have.has(String(t.id)));
+  if (!picks.length) return;
+  picks.sort(() => Math.random() - 0.5);
+  S.ctx.push(...picks.slice(0, 8));
+  try { if (document.body.classList.contains("np-open")) updateNPanel(); } catch (e) {}
+}
 function nextTrack() {
+  ensureSmartQueue();
   if (S.shuffle) {
     const pool = shufflePool();
     if (pool.length > 1) {
@@ -2127,13 +2164,14 @@ function prevTrack() {
   S.idx = (S.idx - 1 + S.ctx.length) % S.ctx.length;
   playTrack(S.ctx[S.idx]);
 }
-audio.addEventListener("play",  () => { S.playing = true;  updatePlayerUI(); });
+audio.addEventListener("play",  () => { S.playing = true;  updatePlayerUI(); ensureSmartQueue(); });
 audio.addEventListener("pause", () => { S.playing = false; updatePlayerUI(); });
 audio.addEventListener("ended", () => {
   if (S.repeat === 2) { audio.currentTime = 0; audio.play().catch(() => {}); return; }   // repeat one
   if (S.repeat === 1) { nextTrack(); return; }                                           // repeat all (loops)
-  if (!S.shuffle && S.ctx.length && S.idx >= S.ctx.length - 1) {                         // off: stop at queue end
-    S.playing = false; updatePlayerUI(); return;
+  if (!S.shuffle && S.ctx.length && S.idx >= S.ctx.length - 1) {
+    ensureSmartQueue();                                     // Autoplay: extend with taste-matched songs
+    if (S.idx >= S.ctx.length - 1) { S.playing = false; updatePlayerUI(); return; }
   }
   nextTrack();
 });
@@ -2226,6 +2264,14 @@ $("#pb-share").onclick = () => shareTrack();
 function updateNPanel() {
   const t = S.current;
   if (!t) { document.body.classList.remove("np-open"); return; }
+  ensureSmartQueue();                                       // panel always shows smart upcoming songs
+  (async () => {                                            // about-the-artist card (cached)
+    const name = (t.artist || "").split(",")[0].trim();
+    const info = await fetchArtistInfo(name);
+    if (info && (info.bio || info.img) && S.current && String(S.current.id) === String(t.id))
+      $("#np-bio").innerHTML = `<div class="np-bio-h">About the artist</div>` + bioCardHTML(info);
+    else $("#np-bio").innerHTML = "";
+  })();
   $("#np-img").src = t.img || "";
   $("#np-title").textContent = t.title || "";
   $("#np-artist").textContent = t.artist || "";
@@ -2347,8 +2393,44 @@ $("#fs-lyr").onclick = () => $("#fs").classList.toggle("lyrics-open");
 function openFS(withLyrics) {
   if (!S.current) return;
   $("#fs").classList.add("open");
-  if (withLyrics) $("#fs").classList.add("lyrics-open");
+  // Desktop: the right column (lyrics + about-the-artist) opens by default,
+  // Spotify-style. On phones it stays a tap away (full-screen overlay).
+  if (withLyrics || window.innerWidth > 900) $("#fs").classList.add("lyrics-open");
+  loadBioFor(S.current);
   updatePlayerUI();
+}
+
+/* ---- About the artist (Deezer + Wikipedia via /api/artist-info) ---- */
+function bioCardHTML(info) {
+  const fans = info.followers ? Number(info.followers).toLocaleString() + " fans" :
+               (info.albums ? info.albums + " albums" : "");
+  return `<div class="bio-card">
+    ${info.img ? `<img class="bimg" src="${esc(info.img)}" loading="lazy" alt=""/>` : ""}
+    <div class="bpad">
+      <h4>${esc(info.name || "")}</h4>
+      ${fans ? `<div class="bfans">${esc(fans)}</div>` : ""}
+      ${info.bio ? `<p>${esc(info.bio)}</p><button class="bmore" onclick="this.previousElementSibling.style.webkitLineClamp='unset';this.remove()">Show more</button>` : ""}
+    </div>
+  </div>`;
+}
+async function fetchArtistInfo(name) {
+  if (!name) return null;
+  if (S.cacheArtist[name]) return S.cacheArtist[name];
+  try {
+    const d = await api(`/api/artist-info?name=${encodeURIComponent(name)}`);
+    S.cacheArtist[name] = d;
+    return d;
+  } catch (e) { return null; }
+}
+async function loadBioFor(track) {
+  const host = $("#lyr-bio"); if (!host || !track) return;
+  const name = (track.artist || "").split(",")[0].trim();
+  host.innerHTML = "";
+  if (!name) return;
+  const info = await fetchArtistInfo(name);
+  if (!info || (!info.bio && !info.img)) return;
+  if (!S.current || String(S.current.id) !== String(track.id)) return;
+  host.innerHTML = `<div class="np-bio-h" style="color:rgba(255,255,255,.5)">About the artist</div>` + bioCardHTML(info);
 }
 
 /* ================= SETTINGS ================= */
@@ -2405,7 +2487,8 @@ function parseLRC(s) {
   return out;
 }
 async function loadLyricsFor(track) {
-  const box = $("#lyr-inner");
+  loadBioFor(track);                      // keep the about-the-artist card in sync
+  const box = $("#lyr-lyrics");
   S.lyr = { id: track.id, synced: null, plain: null, lineEls: [], times: [], active: -1 };
   box.innerHTML = `<div class="lnone">Looking for lyrics…</div>`;
   let d = S.cacheLyrics[track.id];
